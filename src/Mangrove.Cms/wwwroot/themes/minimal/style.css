@@ -49,3 +49,6 @@ body.theme-minimal { font-family: var(--ui); font-size: 1.0625rem; line-height: 
 .min-foot p { margin: .3rem 0; }
 .min-foot a { color: var(--muted); margin-right: 1rem; }
 .min-foot .menu { margin-bottom: .6rem; }
+.theme-minimal .notice-title, .theme-minimal .notice-date b, .theme-minimal .downloads h2 { font-family: var(--ui); }
+.theme-minimal .data-table th { background: none; border-bottom: 2px solid var(--ink); }
+.theme-minimal .data-scroll { border: 0; }

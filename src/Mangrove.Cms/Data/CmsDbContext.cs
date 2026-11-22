@@ -15,6 +15,10 @@ public class CmsDbContext : DbContext
     public DbSet<Media> Media => Set<Media>();
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<Setting> Settings => Set<Setting>();
+    public DbSet<TableColumn> TableColumns => Set<TableColumn>();
+    public DbSet<TableRow> TableRows => Set<TableRow>();
+    public DbSet<Notice> Notices => Set<Notice>();
+    public DbSet<NoticeAttachment> NoticeAttachments => Set<NoticeAttachment>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -54,5 +58,28 @@ public class CmsDbContext : DbContext
         });
 
         b.Entity<MenuItem>(e => e.HasIndex(x => new { x.Location, x.SortOrder }));
+
+        // Table pages and notice boards belong to a page and go when it is deleted.
+        b.Entity<TableColumn>(e =>
+        {
+            e.HasIndex(x => new { x.PostId, x.SortOrder });
+            e.HasOne<Post>().WithMany().HasForeignKey(x => x.PostId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<TableRow>(e =>
+        {
+            e.HasIndex(x => new { x.PostId, x.SortOrder });
+            e.HasOne<Post>().WithMany().HasForeignKey(x => x.PostId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<Notice>(e =>
+        {
+            e.HasIndex(x => new { x.PostId, x.IsPinned, x.NoticeDate });
+            e.HasOne<Post>().WithMany().HasForeignKey(x => x.PostId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<NoticeAttachment>(e =>
+        {
+            e.HasOne(x => x.Notice).WithMany(n => n.Attachments).HasForeignKey(x => x.NoticeId).OnDelete(DeleteBehavior.Cascade);
+            // Deleting a file from the media library removes it from notices too.
+            e.HasOne(x => x.Media).WithMany().HasForeignKey(x => x.MediaId).OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

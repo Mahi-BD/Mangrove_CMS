@@ -74,6 +74,15 @@ public class Post
     public PostType Type { get; set; } = PostType.Post;
     public PostStatus Status { get; set; } = PostStatus.Draft;
 
+    /// <summary>Pages only: standard text page, table page or notice board.</summary>
+    public PageKind Kind { get; set; } = PageKind.Standard;
+
+    /// <summary>Table and notice pages: rows per page on the public site; 0 = everything on one page.</summary>
+    public int ListPageSize { get; set; } = 25;
+
+    /// <summary>Table and notice pages: show a search box to visitors.</summary>
+    public bool ListSearchable { get; set; } = true;
+
     [Required, MaxLength(300)]
     public string Title { get; set; } = "";
 

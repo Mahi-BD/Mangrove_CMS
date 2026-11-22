@@ -1,0 +1,107 @@
+@model Post
+@{
+    ViewData["Title"] = "Edit table: " + Model.Title;
+    ViewData["PostType"] = "Page";
+    var columns = (List<TableColumn>)ViewBag.Columns;
+    var rows = (List<TableRow>)ViewBag.Rows;
+    var data = new
+    {
+        postId = Model.Id,
+        pageSize = Model.ListPageSize,
+        searchable = Model.ListSearchable,
+        columns = columns.Select(c => new { key = c.Id.ToString(), name = c.Name, type = (int)c.Type, width = c.Width }),
+        rows = rows.Select(r => new { cells = TableService.ReadCells(r.Data) }),
+        types = Enum.GetValues<ColumnType>().Select(t => new { value = (int)t, label = TableService.ShortType(t), title = TableService.DisplayType(t) }),
+    };
+}
+<div class="page-head">
+    <h1>@Model.Title</h1>
+    <span class="status status-@Model.Status.ToString().ToLowerInvariant()">@Model.Status</span>
+    <div class="head-actions">
+        <a class="btn" href="/admin/posts/edit/@Model.Id">Page settings</a>
+        <a class="btn" href="/@Model.Slug" target="_blank">@(Model.Status == PostStatus.Published ? "View page" : "Preview") <svg class="ic"><use href="#i-external" /></svg></a>
+    </div>
+    <p class="lede">Click a cell to edit it. Drag the edge of a column heading to change its width, and drag the dots at the start of a row to move it. Save when you're done.</p>
+</div>
+
+<div class="table-editor" id="table-editor">
+    <div class="te-bar">
+        <button type="button" class="btn" data-act="add-row"><svg class="ic"><use href="#i-plus" /></svg> Add row</button>
+        <button type="button" class="btn" data-act="add-col"><svg class="ic"><use href="#i-plus" /></svg> Add column</button>
+        <button type="button" class="btn" data-act="import"><svg class="ic"><use href="#i-upload" /></svg> Import from Excel</button>
+        <div class="search">
+            <svg class="ic"><use href="#i-search" /></svg>
+            <input type="search" placeholder="Find rows" aria-label="Find rows" data-filter />
+        </div>
+        <span class="spacer"></span>
+        <span class="te-state muted" data-state aria-live="polite"></span>
+        <button type="button" class="btn primary" data-act="save">Save table</button>
+    </div>
+
+    <div class="te-empty panel" data-empty hidden>
+        <h2>Set up your table</h2>
+        <p class="muted">Start from a ready-made list, add columns one by one, or import a spreadsheet. The first row of the spreadsheet becomes the column names.</p>
+        <div class="actions">
+            <button type="button" class="btn primary" data-act="preset-officers">Use the officer list (SN, Name, Rank, Image, Phone)</button>
+            <button type="button" class="btn" data-act="add-col">Add a column</button>
+            <button type="button" class="btn" data-act="import">Import from Excel</button>
+        </div>
+    </div>
+
+    <div class="te-scroll" data-scroll>
+        <table class="te-grid" data-grid>
+            <colgroup data-cols></colgroup>
+            <thead data-head></thead>
+            <tbody data-body></tbody>
+        </table>
+    </div>
+    <div class="te-foot">
+        <span class="muted" data-count></span>
+        <nav class="te-pager" data-pager></nav>
+    </div>
+
+    <section class="panel te-settings">
+        <h2>On the public page</h2>
+        <div class="te-settings-row">
+            <div>
+                <label for="te-pagesize">Rows</label>
+                <select id="te-pagesize" data-pagesize>
+                    <option value="0">Show all rows on one page</option>
+                    <option value="10">10 rows per page</option>
+                    <option value="25">25 rows per page</option>
+                    <option value="50">50 rows per page</option>
+                    <option value="100">100 rows per page</option>
+                </select>
+            </div>
+            <label class="check"><input type="checkbox" data-searchable /> Show a search box above the table</label>
+        </div>
+    </section>
+</div>
+
+<dialog id="import-dialog" class="media-picker te-dialog" aria-labelledby="import-title">
+    <form method="post" asp-antiforgery="true" action="/admin/pagetable/import/@Model.Id" enctype="multipart/form-data">
+        <div class="picker-head">
+            <h2 id="import-title">Import from Excel</h2>
+            <button type="button" class="btn sm quiet" data-close aria-label="Close"><svg class="ic"><use href="#i-x" /></svg></button>
+        </div>
+        <div class="te-dialog-body">
+            <p class="muted">Upload an .xlsx, .xls or .csv file. The first row should hold the column names, for example <em>SN, Name, Rank, Image, Phone</em>. Column types are guessed from the names; you can change them after importing.</p>
+            <label for="import-file">Spreadsheet</label>
+            <input id="import-file" type="file" name="file" accept=".xlsx,.xls,.csv" required />
+            <fieldset style="margin-top:1rem">
+                <legend>What to do with the current rows</legend>
+                <label class="check"><input type="radio" name="replace" value="true" checked /> Replace the whole table with the spreadsheet</label>
+                <label class="check"><input type="radio" name="replace" value="false" /> Keep the current rows and add the spreadsheet's rows below</label>
+            </fieldset>
+            <p class="small muted">Images in an Excel file can't be imported. After importing, pick each photo from the media library, or put image addresses (https://…) in the sheet.</p>
+            <div class="actions"><button class="btn primary">Import</button><button type="button" class="btn quiet" data-close>Cancel</button></div>
+        </div>
+    </form>
+</dialog>
+
+<partial name="_MediaPicker" />
+
+@section Scripts {
+    <script>window.MANGROVE_TABLE = @Json.Serialize(data);</script>
+    <script src="/js/table-editor.js" asp-append-version="true"></script>
+}

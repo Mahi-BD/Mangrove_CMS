@@ -85,7 +85,7 @@
             if (k === 'b') { e.preventDefault(); actions.bold(); }
             else if (k === 'i') { e.preventDefault(); actions.italic(); }
             else if (k === 'k') { e.preventDefault(); actions.link(); }
-            else if (k === 's') { e.preventDefault(); document.getElementById('post-form').requestSubmit(); }
+            else if (k === 's') { e.preventDefault(); editor.closest('form').requestSubmit(); }
         });
 
         function showTab(name) {
@@ -125,7 +125,7 @@
         });
 
         // Warn before leaving with unsaved changes.
-        var form = document.getElementById('post-form');
+        var form = editor.closest('form');
         var dirty = false;
         form.addEventListener('input', function () { dirty = true; });
         form.addEventListener('submit', function () { dirty = false; });
@@ -193,6 +193,9 @@
             });
         });
     }
+
+    // Shared with other admin scripts (table editor, notice editor).
+    window.MangroveMedia = { open: openPicker, upload: uploadFiles };
 
     // ---- Featured image ----
     var pickFeatured = document.querySelector('[data-pick-featured]');

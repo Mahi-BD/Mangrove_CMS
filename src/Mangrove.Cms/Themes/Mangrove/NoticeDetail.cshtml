@@ -1,0 +1,43 @@
+@model NoticeDetailViewModel
+@{
+    var n = Model.Notice;
+    ViewData["Title"] = n.Title;
+    ViewData["EditUrl"] = $"/admin/notices/edit/{n.Id}";
+    ViewData["EditNoun"] = "notice";
+    var files = n.Attachments.OrderBy(a => a.SortOrder).Where(a => a.Media != null).ToList();
+}
+<article class="entry">
+    <p class="crumb"><a href="/@Model.Board.Slug">@Model.Board.Title</a></p>
+    @if (!n.IsPublished) { <p class="notice">This notice is hidden from visitors. You can see it because you're signed in.</p> }
+    <header class="entry-head">
+        <h1>@n.Title</h1>
+        <p class="meta">Issued <time datetime="@n.NoticeDate.ToString("yyyy-MM-dd")">@n.NoticeDate.ToString("d MMMM yyyy")</time></p>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(n.Description))
+    {
+        <div class="entry-content">@Model.Body</div>
+    }
+
+    @if (files.Count > 0)
+    {
+        <section class="downloads">
+            <h2>@(files.Count == 1 ? "Attached file" : $"Attached files ({files.Count})")</h2>
+            <ul>
+                @foreach (var a in files)
+                {
+                    var m = a.Media!;
+                    var isPdf = m.ContentType == "application/pdf";
+                    <li>
+                        <span class="ext">@System.IO.Path.GetExtension(m.FileName).TrimStart('.').ToUpperInvariant()</span>
+                        <span class="dl-name">@m.FileName<small>@Fmt.Size(m.SizeBytes)</small></span>
+                        @if (isPdf || m.IsImage) { <a class="button ghost" href="@m.Url" target="_blank" rel="noopener">Open</a> }
+                        <a class="button" href="@m.Url" download="@m.FileName">Download</a>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    <p class="back"><a href="/@Model.Board.Slug">See all notices</a></p>
+</article>

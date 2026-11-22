@@ -167,8 +167,73 @@ public class SiteController : Controller
             vm.CommentForm.AuthorEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
         }
 
+        if (full.Type == PostType.Page && full.Kind == PageKind.Table) vm.Table = await LoadTableAsync(full);
+        if (full.Type == PostType.Page && full.Kind == PageKind.Notices) vm.Notices = await LoadNoticesAsync(full);
+
         ViewData["IsHome"] = isHome;
         return View("Single", vm);
+    }
+
+    private int QueryPage() => int.TryParse(Request.Query["page"], out var p) && p > 0 ? p : 1;
+    private string? QueryText() => Request.Query["q"].ToString() is { Length: > 0 } q ? q.Trim() : null;
+
+    private async Task<PageTableView> LoadTableAsync(Post page)
+    {
+        var columns = await _db.TableColumns.AsNoTracking().Where(c => c.PostId == page.Id).OrderBy(c => c.SortOrder).ToListAsync();
+        var raw = await _db.TableRows.AsNoTracking().Where(r => r.PostId == page.Id)
+            .OrderBy(r => r.SortOrder).ThenBy(r => r.Id).Select(r => r.Data).ToListAsync();
+
+        var all = raw.Select((d, i) => (Number: i + 1, Cells: TableService.ReadCells(d))).ToList();
+        var q = page.ListSearchable ? QueryText() : null;
+        var matched = q == null ? all
+            : all.Where(r => r.Cells.Values.Any(v => v.Contains(q, StringComparison.CurrentCultureIgnoreCase))).ToList();
+
+        var size = page.ListPageSize;
+        var totalPages = size <= 0 ? 1 : Math.Max(1, (int)Math.Ceiling(matched.Count / (double)size));
+        var current = Math.Min(QueryPage(), totalPages);
+        return new PageTableView
+        {
+            Columns = columns,
+            Rows = size <= 0 ? matched : matched.Skip((current - 1) * size).Take(size).ToList(),
+            Total = matched.Count,
+            AllRows = all.Count,
+            Page = current,
+            TotalPages = totalPages,
+            PageSize = size,
+            Searchable = page.ListSearchable,
+            Query = q,
+        };
+    }
+
+    private async Task<NoticeListView> LoadNoticesAsync(Post page)
+    {
+        var query = _db.Notices.AsNoTracking().Where(n => n.PostId == page.Id && n.IsPublished);
+        var q = page.ListSearchable ? QueryText() : null;
+        if (q != null) query = query.Where(n => EF.Functions.Like(n.Title, $"%{q}%") || EF.Functions.Like(n.Description, $"%{q}%"));
+
+        var total = await query.CountAsync();
+        var size = page.ListPageSize <= 0 ? Math.Max(total, 1) : page.ListPageSize;
+        var current = Math.Min(QueryPage(), Math.Max(1, (int)Math.Ceiling(total / (double)size)));
+        var items = await query.Include(n => n.Attachments).ThenInclude(a => a.Media)
+            .OrderByDescending(n => n.IsPinned).ThenByDescending(n => n.NoticeDate).ThenByDescending(n => n.Id)
+            .Skip((current - 1) * size).Take(size).AsSplitQuery().ToListAsync();
+        return new NoticeListView { Result = new PagedResult<Notice>(items, current, size, total), Searchable = page.ListSearchable, Query = q };
+    }
+
+    /// <summary>A single notice with its full description and files.</summary>
+    [HttpGet("/{slug}/notice/{id:int}")]
+    public async Task<IActionResult> NoticeDetail(string slug, int id)
+    {
+        var canPreview = User.AtLeast(UserRole.Editor);
+        var boards = canPreview ? _db.Posts.AsNoTracking().Where(p => p.Status != PostStatus.Trash) : _posts.Live(PostType.Page);
+        var board = await boards.FirstOrDefaultAsync(p => p.Type == PostType.Page && p.Kind == PageKind.Notices && p.Slug == slug);
+        if (board == null) return NotFoundPage();
+
+        var notice = await _db.Notices.AsNoTracking().Include(n => n.Attachments).ThenInclude(a => a.Media)
+            .FirstOrDefaultAsync(n => n.Id == id && n.PostId == board.Id && (n.IsPublished || canPreview));
+        if (notice == null) return NotFoundPage();
+
+        return View("NoticeDetail", new NoticeDetailViewModel { Board = board, Notice = notice, Body = _renderer.Render(notice.Description) });
     }
 
     [HttpPost("/comments"), EnableRateLimiting("forms")]

@@ -17,8 +17,38 @@ public class PostListViewModel
     public bool IsHome { get; set; }
 }
 
+public class PageTableView
+{
+    public List<TableColumn> Columns { get; set; } = new();
+    /// <summary>Rows for the current page: the row's position in the full table (for serial numbers) and its cells.</summary>
+    public List<(int Number, Dictionary<string, string> Cells)> Rows { get; set; } = new();
+    public int Total { get; set; }
+    public int AllRows { get; set; }
+    public int Page { get; set; } = 1;
+    public int TotalPages { get; set; } = 1;
+    public int PageSize { get; set; }
+    public bool Searchable { get; set; }
+    public string? Query { get; set; }
+}
+
+public class NoticeListView
+{
+    public PagedResult<Notice> Result { get; set; } = new(Array.Empty<Notice>(), 1, 25, 0);
+    public bool Searchable { get; set; }
+    public string? Query { get; set; }
+}
+
+public class NoticeDetailViewModel
+{
+    public Post Board { get; set; } = null!;
+    public Notice Notice { get; set; } = null!;
+    public HtmlString Body { get; set; } = HtmlString.Empty;
+}
+
 public class SingleViewModel
 {
+    public PageTableView? Table { get; set; }
+    public NoticeListView? Notices { get; set; }
     public Post Post { get; set; } = null!;
     public HtmlString Body { get; set; } = HtmlString.Empty;
     public List<Comment> Comments { get; set; } = new();
@@ -129,6 +159,9 @@ public class PostEditForm
 {
     public int Id { get; set; }
     public PostType Type { get; set; }
+
+    /// <summary>Pages only. Chosen when the page is created and fixed afterwards.</summary>
+    public PageKind Kind { get; set; } = PageKind.Standard;
 
     [Required, MaxLength(300)]
     public string Title { get; set; } = "";

@@ -1,0 +1,124 @@
+@model Mangrove.Cms.Areas.Admin.Controllers.NoticeEditForm
+@{
+    var board = (Post)ViewBag.Board;
+    var attachments = (List<NoticeAttachment>)ViewBag.Attachments;
+    ViewData["Title"] = Model.Id == 0 ? "Add notice" : "Edit notice";
+    ViewData["PostType"] = "Page";
+}
+<div class="page-head">
+    <h1>@ViewData["Title"]</h1>
+    <div class="head-actions">
+        <a class="btn quiet" href="/admin/notices/index/@board.Id">Back to @board.Title</a>
+    </div>
+</div>
+
+<form method="post" asp-antiforgery="true" action="/admin/notices/save" enctype="multipart/form-data" class="editor-grid" id="notice-form">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="PostId" />
+    <input type="hidden" asp-for="LibraryMediaIds" id="library-ids" />
+    <div asp-validation-summary="ModelOnly" class="errors"></div>
+
+    <div class="editor-main">
+        <div class="sheet md-editor" data-preview-url="/admin/posts/preview">
+            <label for="Title" class="sr-only">Title</label>
+            <input asp-for="Title" class="title-input" placeholder="Notice title" autofocus="@(Model.Id == 0)" autocomplete="off" />
+            <span asp-validation-for="Title" class="field-error" style="padding:0 2rem 1rem"></span>
+            <div class="md-toolbar" role="toolbar" aria-label="Formatting">
+                <button type="button" data-md="bold" title="Bold"><b>B</b></button>
+                <button type="button" data-md="italic" title="Italic"><i>I</i></button>
+                <button type="button" data-md="link" title="Link">Link</button>
+                <span class="sep"></span>
+                <button type="button" data-md="h3" title="Heading">Heading</button>
+                <button type="button" data-md="ul" title="List">List</button>
+                <button type="button" data-md="ol" title="Numbered list">1. 2. 3.</button>
+                <span class="sep"></span>
+                <button type="button" data-md="image" title="Upload or choose an image" class="tb-strong"><svg class="ic"><use href="#i-media" /></svg> Add image</button>
+                <span class="spacer"></span>
+                <span class="seg">
+                    <button type="button" class="tab active" data-tab="write">Write</button>
+                    <button type="button" class="tab" data-tab="preview">Preview</button>
+                </span>
+            </div>
+            <label for="Description" class="sr-only">Details</label>
+            <textarea asp-for="Description" rows="12" class="md-input" placeholder="Details shown when a visitor opens the notice (optional)."></textarea>
+            <div class="md-preview entry-content" hidden></div>
+        </div>
+    </div>
+
+    <div class="editor-side">
+        <section class="panel">
+            <h2>Notice</h2>
+            <label asp-for="NoticeDate">Notice date</label>
+            <input asp-for="NoticeDate" type="date" asp-format="{0:yyyy-MM-dd}" />
+            <label class="check" style="margin-top:.9rem"><input asp-for="IsPublished" /> Visible on the site</label>
+            <label class="check"><input asp-for="IsPinned" /> Pin to the top of the list</label>
+            <div class="publish-actions">
+                <button type="submit" class="btn primary">@(Model.Id == 0 ? "Add notice" : "Save notice")</button>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Files</h2>
+            @if (attachments.Count > 0)
+            {
+                <ul class="file-list">
+                    @foreach (var a in attachments)
+                    {
+                        <li>
+                            <label class="check"><input type="checkbox" name="KeepAttachmentIds" value="@a.Id" checked="@Model.KeepAttachmentIds.Contains(a.Id)" />
+                                <span class="file-name" title="@a.Media?.FileName">@a.Media?.FileName</span></label>
+                            <span class="small muted">@(a.Media == null ? "" : Fmt.Size(a.Media.SizeBytes))</span>
+                        </li>
+                    }
+                </ul>
+                <span class="hint">Untick a file to remove it from this notice. It stays in the media library.</span>
+            }
+            <ul class="file-list" id="picked-files"></ul>
+            <label class="dropzone file-drop" for="notice-files">
+                <svg class="ic"><use href="#i-upload" /></svg>
+                <span class="grow"><strong>Add files</strong><br /><span class="small muted">PDF, Word, Excel, images and more. Choose several at once.</span></span>
+            </label>
+            <input id="notice-files" type="file" name="files" multiple accept="@MediaService.AcceptList" class="sr-only" />
+            <button type="button" class="btn sm" data-pick-library style="margin-top:.6rem">Choose from media library</button>
+        </section>
+    </div>
+</form>
+
+<partial name="_MediaPicker" />
+
+@section Scripts {
+    <script>
+        (function () {
+            var input = document.getElementById('notice-files');
+            var list = document.getElementById('picked-files');
+            var ids = document.getElementById('library-ids');
+            var drop = document.querySelector('.file-drop');
+            var library = []; // {id, fileName}
+            function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+            function size(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+            function draw() {
+                var html = [].map.call(input.files, function (f) {
+                    return '<li class="new"><span class="file-name">' + esc(f.name) + '</span><span class="small muted">' + size(f.size) + ', new</span></li>';
+                }).join('') + library.map(function (m, i) {
+                    return '<li class="new"><span class="file-name">' + esc(m.fileName) + '</span><button type="button" class="linklike danger small" data-unpick="' + i + '">Remove</button></li>';
+                }).join('');
+                list.innerHTML = html;
+                ids.value = library.map(function (m) { return m.id; }).join(',');
+            }
+            input.addEventListener('change', draw);
+            ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+            ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function () { drop.classList.remove('over'); }); });
+            drop.addEventListener('drop', function (e) { e.preventDefault(); input.files = e.dataTransfer.files; draw(); });
+            document.querySelector('[data-pick-library]').addEventListener('click', function () {
+                window.MangroveMedia.open(false, function (m) {
+                    if (!library.some(function (x) { return x.id === m.id; })) library.push({ id: m.id, fileName: m.fileName });
+                    draw();
+                });
+            });
+            list.addEventListener('click', function (e) {
+                var b = e.target.closest('[data-unpick]');
+                if (b) { library.splice(+b.dataset.unpick, 1); draw(); }
+            });
+        })();
+    </script>
+}

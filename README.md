@@ -13,6 +13,7 @@ It's a single, self-contained app: no database server to install, no Node build 
 | | |
 |---|---|
 | **Posts & pages** | Drafts, publishing, scheduled posts, sticky posts, trash and restore, nested pages, featured images, excerpts and SEO meta descriptions |
+| **Page types** | *Standard* pages with text and images; *table pages* (officer lists, directories, price lists) with typed columns (serial no., text, number, phone, email, image, link, date), spreadsheet-style editing, drag-to-resize columns, Excel/CSV import, and paging or a single long page; *notice boards* with dated notices, multiple attached files per notice, and a details page for each |
 | **Writing** | Markdown editor with a toolbar, live preview, keyboard shortcuts, and paste or drag-and-drop image upload |
 | **Taxonomies** | Categories (hierarchical) and tags, each with an archive page |
 | **Media library** | Upload, search, alt text and captions. File types are allow-listed, and SVG/HTML uploads are blocked |

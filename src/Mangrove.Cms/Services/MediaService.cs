@@ -6,6 +6,7 @@ namespace Mangrove.Cms.Services;
 public class MediaService
 {
     public const long MaxBytes = 25 * 1024 * 1024;
+    public const long MaxRequestBytes = 105 * 1024 * 1024;
 
     // Extension → content type. Anything not listed is rejected (no SVG/HTML: script risk).
     private static readonly Dictionary<string, string> Allowed = new(StringComparer.OrdinalIgnoreCase)

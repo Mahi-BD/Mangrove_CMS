@@ -1,0 +1,97 @@
+@model PageTableView
+@{
+    var path = Context.Request.Path.Value ?? "/";
+    string PageUrl(int n) => $"{path}?page={n}{(string.IsNullOrEmpty(Model.Query) ? "" : "&q=" + Uri.EscapeDataString(Model.Query))}#data";
+    var hasWidths = Model.Columns.Any(c => c.Width.HasValue);
+    var first = Model.PageSize <= 0 ? 1 : (Model.Page - 1) * Model.PageSize + 1;
+    var last = first + Model.Rows.Count - 1;
+}
+<section class="data-table" id="data" aria-label="Table">
+    @if (Model.Searchable && Model.AllRows > 0)
+    {
+        <form method="get" action="@path#data" role="search" class="data-search">
+            <label for="table-q" class="sr-only">Search this table</label>
+            <input id="table-q" type="search" name="q" value="@Model.Query" placeholder="Search this table" />
+            <button type="submit" class="button">Search</button>
+            @if (!string.IsNullOrEmpty(Model.Query)) { <a href="@path#data" class="clear">Show all</a> }
+        </form>
+    }
+
+    @if (Model.Columns.Count == 0 || Model.AllRows == 0)
+    {
+        <p class="empty">This table is empty.</p>
+    }
+    else if (Model.Total == 0)
+    {
+        <p class="empty">Nothing in this table matches “@Model.Query”.</p>
+    }
+    else
+    {
+        <div class="data-scroll">
+            <table class="@(hasWidths ? "fixed" : null)">
+                @if (hasWidths)
+                {
+                    <colgroup>@foreach (var c in Model.Columns) { <col style="@(c.Width.HasValue ? $"width:{c.Width}px" : null)" /> }</colgroup>
+                }
+                <thead>
+                    <tr>@foreach (var c in Model.Columns) { <th scope="col" class="t-@c.Type.ToString().ToLowerInvariant()">@c.Name</th> }</tr>
+                </thead>
+                <tbody>
+                    @foreach (var (number, cells) in Model.Rows)
+                    {
+                        <tr>
+                            @foreach (var c in Model.Columns)
+                            {
+                                var v = cells.TryGetValue(c.Id.ToString(), out var x) ? x : "";
+                                <td class="t-@c.Type.ToString().ToLowerInvariant() @(c.Type != ColumnType.Serial && string.IsNullOrWhiteSpace(v) ? "is-empty" : null)" data-label="@c.Name">
+                                    @switch (c.Type)
+                                    {
+                                        case ColumnType.Serial:
+                                            @number
+                                            break;
+                                        case ColumnType.Image:
+                                            if (TableService.IsSafeUrl(v)) { <a href="@v" target="_blank" rel="noopener"><img src="@v" alt="@(cells.Values.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s) && s != v))" loading="lazy" /></a> }
+                                            break;
+                                        case ColumnType.Phone:
+                                            if (!string.IsNullOrWhiteSpace(v)) { <a href="@TableService.TelHref(v)">@v</a> }
+                                            break;
+                                        case ColumnType.Email:
+                                            if (!string.IsNullOrWhiteSpace(v)) { <a href="mailto:@v">@v</a> }
+                                            break;
+                                        case ColumnType.Link:
+                                            if (TableService.IsSafeUrl(v)) { <a href="@v" target="_blank" rel="noopener nofollow">@(Uri.TryCreate(v, UriKind.Absolute, out var u) ? u.Host : v)</a> } else { @v }
+                                            break;
+                                        case ColumnType.Date:
+                                            @(DateTime.TryParse(v, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d) ? d.ToString("d MMM yyyy") : v)
+                                            break;
+                                        default:
+                                            @v
+                                            break;
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="data-foot">
+            <span>@(Model.TotalPages > 1 ? $"Showing {first}–{last} of {Model.Total}" : $"{Model.Total} {(Model.Total == 1 ? "entry" : "entries")}")@(Model.Query != null ? $" matching “{Model.Query}”" : "")</span>
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="data-pager" aria-label="Table pages">
+                    @if (Model.Page > 1) { <a class="button ghost" href="@PageUrl(Model.Page - 1)">Previous</a> }
+                    @for (var i = 1; i <= Model.TotalPages; i++)
+                    {
+                        if (i == 1 || i == Model.TotalPages || Math.Abs(i - Model.Page) <= 2)
+                        {
+                            <a class="pg @(i == Model.Page ? "on" : null)" href="@PageUrl(i)" aria-current="@(i == Model.Page ? "page" : null)">@i</a>
+                        }
+                        else if (Math.Abs(i - Model.Page) == 3) { <span class="pg gap">…</span> }
+                    }
+                    @if (Model.Page < Model.TotalPages) { <a class="button ghost" href="@PageUrl(Model.Page + 1)">Next</a> }
+                </nav>
+            }
+        </div>
+    }
+</section>

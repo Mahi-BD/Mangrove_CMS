@@ -1,8 +1,10 @@
 @model PostEditForm
 @{
     var isPage = Model.Type == PostType.Page;
-    var noun = isPage ? "page" : "post";
+    var kind = isPage ? Model.Kind : PageKind.Standard;
+    var noun = kind switch { PageKind.Table => "table page", PageKind.Notices => "notice board", _ => isPage ? "page" : "post" };
     ViewData["Title"] = Model.Id == 0 ? $"New {noun}" : $"Edit {noun}";
+    var contentCount = ViewBag.ContentCount as string;
     ViewData["PostType"] = Model.Type.ToString();
     var categories = (List<Term>)ViewBag.Categories;
     var pages = (List<Post>)ViewBag.Pages;
@@ -23,9 +25,31 @@
 <form method="post" asp-antiforgery="true" action="/admin/posts/save" class="editor-grid" id="post-form">
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="Type" />
+    <input type="hidden" asp-for="Kind" />
     <div asp-validation-summary="ModelOnly" class="errors"></div>
 
     <div class="editor-main">
+        @if (kind != PageKind.Standard)
+        {
+            <section class="panel content-link">
+                <svg class="ic"><use href="@(kind == PageKind.Table ? "#i-table" : "#i-notice")" /></svg>
+                <div class="grow">
+                    <h2>@(kind == PageKind.Table ? "Table" : "Notices")</h2>
+                    @if (Model.Id == 0)
+                    {
+                        <p class="muted">Give the page a title and save it. You'll set up the @(kind == PageKind.Table ? "columns and rows" : "notices") next.</p>
+                    }
+                    else
+                    {
+                        <p class="muted">@contentCount</p>
+                    }
+                </div>
+                @if (Model.Id != 0)
+                {
+                    <a class="btn primary" href="@(kind == PageKind.Table ? $"/admin/pagetable/edit/{Model.Id}" : $"/admin/notices/index/{Model.Id}")">@(kind == PageKind.Table ? "Edit table" : "Manage notices")</a>
+                }
+            </section>
+        }
         <div class="sheet md-editor" data-preview-url="/admin/posts/preview">
             <label for="Title" class="sr-only">Title</label>
             <input asp-for="Title" class="title-input" placeholder="Title" autofocus="@(Model.Id == 0)" autocomplete="off" />
@@ -48,7 +72,7 @@
                 <button type="button" data-md="ol" title="Numbered list">1. 2. 3.</button>
                 <button type="button" data-md="code" title="Code">Code</button>
                 <span class="sep"></span>
-                <button type="button" data-md="image" title="Insert an image or file">Image</button>
+                <button type="button" data-md="image" title="Upload or choose an image" class="tb-strong"><svg class="ic"><use href="#i-media" /></svg> Add image</button>
                 <span class="spacer"></span>
                 <span class="seg">
                     <button type="button" class="tab active" data-tab="write">Write</button>
@@ -56,7 +80,7 @@
                 </span>
             </div>
             <label for="Content" class="sr-only">Content</label>
-            <textarea asp-for="Content" rows="22" class="md-input" placeholder="Start writing. Markdown works: **bold**, ## heading, - list. You can also paste or drop images here."></textarea>
+            <textarea asp-for="Content" rows="@(kind == PageKind.Standard ? 22 : 8)" class="md-input" placeholder="@(kind == PageKind.Standard ? "Start writing. Markdown works: **bold**, ## heading, - list. Use Add image, or paste or drop pictures here." : "Optional introduction shown above the " + (kind == PageKind.Table ? "table" : "notices") + ".")"></textarea>
             <div class="md-preview entry-content" hidden></div>
         </div>
 
@@ -91,7 +115,7 @@
             }
             <div class="publish-actions">
                 @if (!isLive) { <button type="submit" class="btn" data-status="Draft">Save draft</button> }
-                <button type="submit" class="btn primary" data-primary>@(isLive ? "Update" : "Save")</button>
+                <button type="submit" class="btn primary" data-primary data-next="@(Model.Id == 0 && kind != PageKind.Standard ? "1" : null)">@(isLive ? "Update" : "Save")</button>
             </div>
             @if (Model.Id != 0)
             {
@@ -173,6 +197,7 @@
         function label() {
             primary.textContent = sel.value === 'Published' ? (live ? 'Update' : 'Publish')
                                 : sel.value === 'Scheduled' ? 'Schedule' : (live ? 'Update' : 'Save');
+            if (primary.dataset.next) primary.textContent += ' and continue';
         }
         sel.addEventListener('change', label); label();
     </script>

@@ -1,0 +1,63 @@
+@model PagedResult<Notice>
+@{
+    var board = (Post)ViewBag.Board;
+    var q = ViewBag.Q as string;
+    ViewData["Title"] = "Notices: " + board.Title;
+    ViewData["PostType"] = "Page";
+    Func<int, string> pageUrl = n => $"/admin/notices/index/{board.Id}?page={n}{(string.IsNullOrEmpty(q) ? "" : "&q=" + Uri.EscapeDataString(q))}";
+}
+<div class="page-head">
+    <h1>@board.Title</h1>
+    <span class="status status-@board.Status.ToString().ToLowerInvariant()">@board.Status</span>
+    <div class="head-actions">
+        <a class="btn" href="/admin/posts/edit/@board.Id">Page settings</a>
+        <a class="btn" href="/@board.Slug" target="_blank">@(board.Status == PostStatus.Published ? "View page" : "Preview") <svg class="ic"><use href="#i-external" /></svg></a>
+        <a class="btn primary" href="/admin/notices/create/@board.Id"><svg class="ic"><use href="#i-plus" /></svg> Add notice</a>
+    </div>
+    @if (board.Status != PostStatus.Published)
+    {
+        <p class="lede">This page is a @board.Status.ToString().ToLowerInvariant(), so visitors can't see it yet. Publish it from <a href="/admin/posts/edit/@board.Id">Page settings</a>.</p>
+    }
+</div>
+
+<div class="toolbar">
+    <form method="get" class="search" role="search">
+        <svg class="ic"><use href="#i-search" /></svg>
+        <input type="search" name="q" value="@q" placeholder="Search notices" aria-label="Search notices" />
+    </form>
+</div>
+
+<div class="table-wrap">
+<table class="table">
+    <thead><tr><th style="width:9rem">Date</th><th>Title</th><th>Files</th><th>Status</th></tr></thead>
+    <tbody>
+        @if (Model.Items.Count == 0)
+        {
+            <tr class="empty"><td colspan="4">
+                @if (!string.IsNullOrEmpty(q)) { <text>No notices match “@q”.</text> }
+                else { <text>No notices yet. <a href="/admin/notices/create/@board.Id">Add the first notice</a>.</text> }
+            </td></tr>
+        }
+        @foreach (var n in Model.Items)
+        {
+            <tr>
+                <td class="when">@n.NoticeDate.ToString("d MMM yyyy")</td>
+                <td>
+                    <a class="row-title" href="/admin/notices/edit/@n.Id">@n.Title</a>
+                    @if (n.IsPinned) { <span class="flag">Pinned</span> }
+                    <div class="row-actions">
+                        <a href="/admin/notices/edit/@n.Id">Edit</a>
+                        <a href="/@board.Slug/notice/@n.Id" target="_blank">View</a>
+                        <form method="post" asp-antiforgery="true" action="/admin/notices/delete/@n.Id" class="inline" data-confirm="Delete the notice “@n.Title”? Its files stay in the media library.">
+                            <button class="linklike danger">Delete</button>
+                        </form>
+                    </div>
+                </td>
+                <td class="num">@(n.Attachments.Count == 0 ? "None" : n.Attachments.Count == 1 ? "1 file" : $"{n.Attachments.Count} files")</td>
+                <td><span class="status @(n.IsPublished ? "status-published" : "status-draft")">@(n.IsPublished ? "Visible" : "Hidden")</span></td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, pageUrl)" />

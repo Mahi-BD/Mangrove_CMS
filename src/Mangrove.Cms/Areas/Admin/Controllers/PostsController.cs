@@ -54,10 +54,13 @@ public class PostsController : AdminController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Create(PostType type = PostType.Post)
+    public async Task<IActionResult> Create(PostType type = PostType.Post, PageKind? kind = null)
     {
         if (!CanUseType(type)) return Forbid();
-        var form = new PostEditForm { Type = type, AllowComments = type == PostType.Post };
+        // New pages start by choosing what kind of page they are.
+        if (type == PostType.Page && kind == null) return View("ChooseKind");
+
+        var form = new PostEditForm { Type = type, Kind = type == PostType.Page ? kind ?? PageKind.Standard : PageKind.Standard, AllowComments = type == PostType.Post };
         if (type == PostType.Post)
         {
             var general = await _db.Terms.FirstOrDefaultAsync(t => t.Type == TermType.Category);
@@ -78,6 +81,7 @@ public class PostsController : AdminController
         {
             Id = post.Id,
             Type = post.Type,
+            Kind = post.Kind,
             Title = post.Title,
             Slug = post.Slug,
             Content = post.Content,
@@ -123,9 +127,17 @@ public class PostsController : AdminController
         }
 
         var now = DateTime.UtcNow;
+        var isNew = post == null;
         if (post == null)
         {
-            post = new Post { Type = form.Type, AuthorId = CurrentUserId, CreatedAt = now };
+            post = new Post
+            {
+                Type = form.Type,
+                Kind = form.Type == PostType.Page && Enum.IsDefined(form.Kind) ? form.Kind : PageKind.Standard,
+                AuthorId = CurrentUserId,
+                CreatedAt = now,
+                AllowComments = false,
+            };
             _db.Posts.Add(post);
         }
 
@@ -166,6 +178,10 @@ public class PostsController : AdminController
             PostStatus.Scheduled => $"{post.Type} scheduled for {post.PublishedAt:yyyy-MM-dd HH:mm} UTC.",
             _ => "Draft saved.",
         });
+
+        // A brand-new table page or notice board goes straight to its content editor.
+        if (isNew && post.Kind == PageKind.Table) return RedirectToAction("Edit", "PageTable", new { id = post.Id });
+        if (isNew && post.Kind == PageKind.Notices) return RedirectToAction("Index", "Notices", new { id = post.Id });
         return RedirectToAction(nameof(Edit), new { id = post.Id });
     }
 
@@ -253,5 +269,17 @@ public class PostsController : AdminController
                 .OrderBy(p => p.Title).ToListAsync()
             : new List<Post>();
         ViewBag.Featured = form.FeaturedMediaId is > 0 ? await _db.Media.FindAsync(form.FeaturedMediaId) : null;
+        if (form.Id != 0 && form.Kind == PageKind.Table)
+        {
+            var cols = await _db.TableColumns.CountAsync(c => c.PostId == form.Id);
+            var rows = await _db.TableRows.CountAsync(r => r.PostId == form.Id);
+            ViewBag.ContentCount = cols == 0 ? "No columns yet. Add columns or import an Excel file."
+                : $"{rows:N0} {(rows == 1 ? "row" : "rows")} in {cols} {(cols == 1 ? "column" : "columns")}.";
+        }
+        else if (form.Id != 0 && form.Kind == PageKind.Notices)
+        {
+            var n = await _db.Notices.CountAsync(x => x.PostId == form.Id);
+            ViewBag.ContentCount = n == 0 ? "No notices yet." : $"{n:N0} {(n == 1 ? "notice" : "notices")}.";
+        }
     }
 }

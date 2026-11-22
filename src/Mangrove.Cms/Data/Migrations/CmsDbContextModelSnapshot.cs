@@ -147,6 +147,73 @@ namespace Mangrove.Cms.Data.Migrations
                     b.ToTable("MenuItems");
                 });
 
+            modelBuilder.Entity("Mangrove.Cms.Models.Notice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CreatedById")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("NoticeDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId", "IsPinned", "NoticeDate");
+
+                    b.ToTable("Notices");
+                });
+
+            modelBuilder.Entity("Mangrove.Cms.Models.NoticeAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MediaId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("NoticeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MediaId");
+
+                    b.HasIndex("NoticeId");
+
+                    b.ToTable("NoticeAttachments");
+                });
+
             modelBuilder.Entity("Mangrove.Cms.Models.Post", b =>
                 {
                     b.Property<int>("Id")
@@ -174,6 +241,15 @@ namespace Mangrove.Cms.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsSticky")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ListPageSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ListSearchable")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("MenuOrder")
@@ -249,6 +325,59 @@ namespace Mangrove.Cms.Data.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("Settings");
+                });
+
+            modelBuilder.Entity("Mangrove.Cms.Models.TableColumn", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId", "SortOrder");
+
+                    b.ToTable("TableColumns");
+                });
+
+            modelBuilder.Entity("Mangrove.Cms.Models.TableRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId", "SortOrder");
+
+                    b.ToTable("TableRows");
                 });
 
             modelBuilder.Entity("Mangrove.Cms.Models.Term", b =>
@@ -354,6 +483,34 @@ namespace Mangrove.Cms.Data.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("Mangrove.Cms.Models.Notice", b =>
+                {
+                    b.HasOne("Mangrove.Cms.Models.Post", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Mangrove.Cms.Models.NoticeAttachment", b =>
+                {
+                    b.HasOne("Mangrove.Cms.Models.Media", "Media")
+                        .WithMany()
+                        .HasForeignKey("MediaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Mangrove.Cms.Models.Notice", "Notice")
+                        .WithMany("Attachments")
+                        .HasForeignKey("NoticeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Media");
+
+                    b.Navigation("Notice");
+                });
+
             modelBuilder.Entity("Mangrove.Cms.Models.Post", b =>
                 {
                     b.HasOne("Mangrove.Cms.Models.User", "Author")
@@ -389,6 +546,29 @@ namespace Mangrove.Cms.Data.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("Term");
+                });
+
+            modelBuilder.Entity("Mangrove.Cms.Models.TableColumn", b =>
+                {
+                    b.HasOne("Mangrove.Cms.Models.Post", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Mangrove.Cms.Models.TableRow", b =>
+                {
+                    b.HasOne("Mangrove.Cms.Models.Post", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Mangrove.Cms.Models.Notice", b =>
+                {
+                    b.Navigation("Attachments");
                 });
 
             modelBuilder.Entity("Mangrove.Cms.Models.Post", b =>

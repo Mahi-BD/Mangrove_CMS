@@ -15,7 +15,7 @@
     var byParent = Model.Comments.ToLookup(c => c.ParentId);
 }
 
-<article class="entry entry-@post.Type.ToString().ToLowerInvariant()">
+<article class="entry entry-@post.Type.ToString().ToLowerInvariant() @(post.Kind != PageKind.Standard && post.Type == PostType.Page ? "entry-wide" : null)">
     @if (!live)
     {
         <p class="notice">This is a preview. The @post.Type.ToString().ToLowerInvariant() is a @post.Status.ToString().ToLowerInvariant() and visitors can't see it yet.</p>
@@ -33,9 +33,15 @@
         </figure>
     }
 
-    <div class="entry-content">
-        @Model.Body
-    </div>
+    @if (!string.IsNullOrWhiteSpace(post.Content))
+    {
+        <div class="entry-content">
+            @Model.Body
+        </div>
+    }
+
+    @if (Model.Table != null) { <partial name="_PageTable" model="Model.Table" /> }
+    @if (Model.Notices != null) { <partial name="_NoticeList" model="Model.Notices" /> }
 
     @if (tags.Count > 0)
     {

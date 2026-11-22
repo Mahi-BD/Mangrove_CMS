@@ -66,6 +66,8 @@
                 <td>
                     <a class="row-title" href="/admin/posts/edit/@p.Id">@p.Title</a>
                     @if (p.IsSticky) { <span class="flag">Pinned</span> }
+                    @if (isPage && p.Kind == PageKind.Table) { <span class="kind-tag">Table</span> }
+                    @if (isPage && p.Kind == PageKind.Notices) { <span class="kind-tag">Notice board</span> }
                     @if (tags.Count > 0) { <div class="small muted">@string.Join(", ", tags)</div> }
                     <div class="row-actions">
                         @if (p.Status == PostStatus.Trash)
@@ -76,6 +78,8 @@
                         else
                         {
                             <a href="/admin/posts/edit/@p.Id">Edit</a>
+                            @if (isPage && p.Kind == PageKind.Table) { <a href="/admin/pagetable/edit/@p.Id">Edit table</a> }
+                            @if (isPage && p.Kind == PageKind.Notices) { <a href="/admin/notices/index/@p.Id">Manage notices</a> }
                             <a href="/@p.Slug" target="_blank">@(p.Status == PostStatus.Published ? "View" : "Preview")</a>
                             <form method="post" asp-antiforgery="true" action="/admin/posts/trash/@p.Id" class="inline"><button class="linklike danger">Move to trash</button></form>
                         }
