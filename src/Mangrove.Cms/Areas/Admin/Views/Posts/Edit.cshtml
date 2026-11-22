@@ -4,12 +4,13 @@
     var kind = isPage ? Model.Kind : PageKind.Standard;
     var noun = kind switch { PageKind.Table => "table page", PageKind.Notices => "notice board", _ => isPage ? "page" : "post" };
     ViewData["Title"] = Model.Id == 0 ? $"New {noun}" : $"Edit {noun}";
-    var contentCount = ViewBag.ContentCount as string;
     ViewData["PostType"] = Model.Type.ToString();
     var categories = (List<Term>)ViewBag.Categories;
     var pages = (List<Post>)ViewBag.Pages;
     var featured = ViewBag.Featured as Media;
-    var isLive = Model.Status == PostStatus.Published;
+    var isLive = Model.Id != 0 && Model.Status == PostStatus.Published;
+    var listNoun = kind == PageKind.Table ? "rows" : "notices";
+    var sizes = new[] { 10, 25, 50, 100 };
 }
 <div class="page-head">
     <h1>@ViewData["Title"]</h1>
@@ -26,63 +27,60 @@
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="Type" />
     <input type="hidden" asp-for="Kind" />
-    <div asp-validation-summary="ModelOnly" class="errors"></div>
+    <div asp-validation-summary="All" class="errors"></div>
 
     <div class="editor-main">
-        @if (kind != PageKind.Standard)
+        @if (kind == PageKind.Standard)
         {
-            <section class="panel content-link">
-                <svg class="ic"><use href="@(kind == PageKind.Table ? "#i-table" : "#i-notice")" /></svg>
-                <div class="grow">
-                    <h2>@(kind == PageKind.Table ? "Table" : "Notices")</h2>
-                    @if (Model.Id == 0)
-                    {
-                        <p class="muted">Give the page a title and save it. You'll set up the @(kind == PageKind.Table ? "columns and rows" : "notices") next.</p>
-                    }
-                    else
-                    {
-                        <p class="muted">@contentCount</p>
-                    }
+            <div class="sheet md-editor" data-preview-url="/admin/posts/preview">
+                <partial name="_TitleFields" model="Model" />
+                <div class="md-toolbar" role="toolbar" aria-label="Formatting">
+                    <button type="button" data-md="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+                    <button type="button" data-md="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+                    <button type="button" data-md="link" title="Link (Ctrl+K)">Link</button>
+                    <span class="sep"></span>
+                    <button type="button" data-md="h2" title="Heading">H2</button>
+                    <button type="button" data-md="h3" title="Subheading">H3</button>
+                    <button type="button" data-md="quote" title="Quote">Quote</button>
+                    <button type="button" data-md="ul" title="Bulleted list">List</button>
+                    <button type="button" data-md="ol" title="Numbered list">1. 2. 3.</button>
+                    <button type="button" data-md="code" title="Code">Code</button>
+                    <span class="sep"></span>
+                    <button type="button" data-md="image" title="Upload or choose an image" class="tb-strong"><svg class="ic"><use href="#i-media" /></svg> Add image</button>
+                    <span class="spacer"></span>
+                    <span class="seg">
+                        <button type="button" class="tab active" data-tab="write">Write</button>
+                        <button type="button" class="tab" data-tab="preview">Preview</button>
+                    </span>
                 </div>
-                @if (Model.Id != 0)
-                {
-                    <a class="btn primary" href="@(kind == PageKind.Table ? $"/admin/pagetable/edit/{Model.Id}" : $"/admin/notices/index/{Model.Id}")">@(kind == PageKind.Table ? "Edit table" : "Manage notices")</a>
-                }
-            </section>
+                <label for="Content" class="sr-only">Content</label>
+                <textarea asp-for="Content" rows="22" class="md-input" placeholder="Start writing. Markdown works: **bold**, ## heading, - list. Use Add image, or paste or drop pictures here."></textarea>
+                <div class="md-preview entry-content" hidden></div>
+            </div>
         }
-        <div class="sheet md-editor" data-preview-url="/admin/posts/preview">
-            <label for="Title" class="sr-only">Title</label>
-            <input asp-for="Title" class="title-input" placeholder="Title" autofocus="@(Model.Id == 0)" autocomplete="off" />
-            <span asp-validation-for="Title" class="field-error" style="padding:0 2rem"></span>
-            <div class="slug-row">
-                <label for="Slug" class="sr-only">Web address</label>
-                <span>@(Context.Request.Host)/</span>
-                <input asp-for="Slug" placeholder="made-from-the-title" />
+        else
+        {
+            <div class="sheet sheet-head">
+                <partial name="_TitleFields" model="Model" />
             </div>
 
-            <div class="md-toolbar" role="toolbar" aria-label="Formatting">
-                <button type="button" data-md="bold" title="Bold (Ctrl+B)"><b>B</b></button>
-                <button type="button" data-md="italic" title="Italic (Ctrl+I)"><i>I</i></button>
-                <button type="button" data-md="link" title="Link (Ctrl+K)">Link</button>
-                <span class="sep"></span>
-                <button type="button" data-md="h2" title="Heading">H2</button>
-                <button type="button" data-md="h3" title="Subheading">H3</button>
-                <button type="button" data-md="quote" title="Quote">Quote</button>
-                <button type="button" data-md="ul" title="Bulleted list">List</button>
-                <button type="button" data-md="ol" title="Numbered list">1. 2. 3.</button>
-                <button type="button" data-md="code" title="Code">Code</button>
-                <span class="sep"></span>
-                <button type="button" data-md="image" title="Upload or choose an image" class="tb-strong"><svg class="ic"><use href="#i-media" /></svg> Add image</button>
-                <span class="spacer"></span>
-                <span class="seg">
-                    <button type="button" class="tab active" data-tab="write">Write</button>
-                    <button type="button" class="tab" data-tab="preview">Preview</button>
-                </span>
-            </div>
-            <label for="Content" class="sr-only">Content</label>
-            <textarea asp-for="Content" rows="@(kind == PageKind.Standard ? 22 : 8)" class="md-input" placeholder="@(kind == PageKind.Standard ? "Start writing. Markdown works: **bold**, ## heading, - list. Use Add image, or paste or drop pictures here." : "Optional introduction shown above the " + (kind == PageKind.Table ? "table" : "notices") + ".")"></textarea>
-            <div class="md-preview entry-content" hidden></div>
-        </div>
+            @if (kind == PageKind.Table)
+            {
+                <input type="hidden" asp-for="TableJson" id="table-json" />
+                <partial name="_TableEditor" />
+            }
+            else
+            {
+                <input type="hidden" asp-for="NoticesJson" id="notices-json" />
+                <partial name="_NoticeEditor" />
+            }
+
+            <details class="panel" open="@(!string.IsNullOrWhiteSpace(Model.Content))">
+                <summary>Introduction text (optional)</summary>
+                <label for="Content" class="sr-only">Introduction text</label>
+                <textarea asp-for="Content" rows="4" class="intro-input" placeholder="A short paragraph shown above the @(kind == PageKind.Table ? "table" : "notices"). Markdown works."></textarea>
+            </details>
+        }
 
         <details class="panel" open="@(!string.IsNullOrEmpty(Model.Excerpt) || !string.IsNullOrEmpty(Model.MetaDescription))">
             <summary>Summary and search appearance</summary>
@@ -108,20 +106,40 @@
             <input asp-for="PublishedAt" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" />
             <span asp-validation-for="PublishedAt" class="field-error"></span>
             <span class="hint">Leave empty to publish now. Pick a future date with “Scheduled”.</span>
-            <label class="check" style="margin-top:.9rem"><input asp-for="AllowComments" /> Allow comments</label>
+            @if (kind == PageKind.Standard)
+            {
+                <label class="check" style="margin-top:.9rem"><input asp-for="AllowComments" /> Allow comments</label>
+            }
             @if (!isPage && User.AtLeast(UserRole.Editor))
             {
                 <label class="check"><input asp-for="IsSticky" /> Pin to the top of the blog</label>
             }
             <div class="publish-actions">
                 @if (!isLive) { <button type="submit" class="btn" data-status="Draft">Save draft</button> }
-                <button type="submit" class="btn primary" data-primary data-next="@(Model.Id == 0 && kind != PageKind.Standard ? "1" : null)">@(isLive ? "Update" : "Save")</button>
+                <button type="submit" class="btn primary" data-primary>@(isLive ? "Update" : "Save")</button>
             </div>
+            <span class="hint save-hint" data-save-hint hidden>You have unsaved changes.</span>
             @if (Model.Id != 0)
             {
                 <button type="submit" form="trash-form" class="linklike danger trash-link">Move to trash</button>
             }
         </section>
+
+        @if (kind != PageKind.Standard)
+        {
+            <section class="panel">
+                <h2>On the website</h2>
+                <label asp-for="ListPageSize">@(kind == PageKind.Table ? "Rows" : "Notices")</label>
+                <select asp-for="ListPageSize">
+                    <option value="0">Show all @listNoun on one page</option>
+                    @foreach (var n in sizes.Union(new[] { Model.ListPageSize }).Where(n => n > 0).OrderBy(n => n))
+                    {
+                        <option value="@n">@n @listNoun per page</option>
+                    }
+                </select>
+                <label class="check" style="margin-top:.8rem"><input asp-for="ListSearchable" /> Show a search box</label>
+            </section>
+        }
 
         @if (!isPage)
         {
@@ -197,8 +215,16 @@
         function label() {
             primary.textContent = sel.value === 'Published' ? (live ? 'Update' : 'Publish')
                                 : sel.value === 'Scheduled' ? 'Schedule' : (live ? 'Update' : 'Save');
-            if (primary.dataset.next) primary.textContent += ' and continue';
         }
         sel.addEventListener('change', label); label();
     </script>
+    @if (kind == PageKind.Table)
+    {
+        <script>window.MANGROVE_TYPES = @Json.Serialize(Enum.GetValues<ColumnType>().Select(t => new { value = (int)t, label = TableService.ShortType(t), title = TableService.DisplayType(t) }));</script>
+        <script src="/js/table-editor.js" asp-append-version="true"></script>
+    }
+    @if (kind == PageKind.Notices)
+    {
+        <script src="/js/notice-editor.js" asp-append-version="true"></script>
+    }
 }

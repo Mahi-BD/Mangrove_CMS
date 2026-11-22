@@ -83,3 +83,43 @@ public class NoticeAttachment
     public Media? Media { get; set; }
     public int SortOrder { get; set; }
 }
+
+// ---------- What the page editor sends for table pages and notice boards ----------
+
+public class TableSaveColumn
+{
+    /// <summary>Existing column id as a string, or a temporary client key like "n3" for a new column.</summary>
+    public string Key { get; set; } = "";
+    public string Name { get; set; } = "";
+    public ColumnType Type { get; set; }
+    public int? Width { get; set; }
+}
+
+public class TableSaveRow
+{
+    public Dictionary<string, string> Cells { get; set; } = new();
+}
+
+public class TableSaveModel
+{
+    public List<TableSaveColumn> Columns { get; set; } = new();
+    public List<TableSaveRow> Rows { get; set; } = new();
+}
+
+public class NoticeSaveFile
+{
+    public int MediaId { get; set; }
+}
+
+public class NoticeSaveModel
+{
+    /// <summary>0 for a notice added in this edit.</summary>
+    public int Id { get; set; }
+    public string Title { get; set; } = "";
+    /// <summary>yyyy-MM-dd</summary>
+    public string? Date { get; set; }
+    public string? Description { get; set; }
+    public bool Pinned { get; set; }
+    public bool Published { get; set; } = true;
+    public List<NoticeSaveFile> Files { get; set; } = new();
+}

@@ -1,0 +1,55 @@
+@* Notice list for notice boards. State lives in the hidden #notices-json field and is saved with the page. *@
+<section class="panel notice-editor" id="notice-editor" aria-label="Notices">
+    <div class="ne-head">
+        <h2>Notices <span class="muted" data-count></span></h2>
+        <div class="search">
+            <svg class="ic"><use href="#i-search" /></svg>
+            <input type="search" placeholder="Find notices" aria-label="Find notices" data-filter />
+        </div>
+        <button type="button" class="btn primary" data-act="add"><svg class="ic"><use href="#i-plus" /></svg> Add notice</button>
+    </div>
+    <ol class="ne-list" data-list></ol>
+    <div class="ne-empty" data-empty hidden>
+        <svg class="ic"><use href="#i-notice" /></svg>
+        <p>No notices yet. Add one with a title, date and any files such as PDFs.</p>
+    </div>
+</section>
+
+<dialog id="notice-dialog" class="media-picker ne-dialog" aria-labelledby="notice-dialog-title">
+    <div class="picker-head">
+        <h2 id="notice-dialog-title" data-dialog-title>Add notice</h2>
+        <button type="button" class="btn sm quiet" data-close aria-label="Close"><svg class="ic"><use href="#i-x" /></svg></button>
+    </div>
+    <div class="ne-dialog-body">
+        <div class="ne-dialog-grid">
+            <div>
+                <label for="ne-title">Title</label>
+                <input id="ne-title" data-f="title" maxlength="300" />
+                <p class="field-error" data-title-error></p>
+                <label for="ne-desc">Details <span class="muted" style="font-weight:400">(shown when a visitor opens the notice)</span></label>
+                <textarea id="ne-desc" data-f="description" rows="8" placeholder="Optional. Markdown works: **bold**, - list."></textarea>
+            </div>
+            <div>
+                <label for="ne-date">Notice date</label>
+                <input id="ne-date" type="date" data-f="date" />
+                <label class="check" style="margin-top:.9rem"><input type="checkbox" data-f="published" /> Visible on the site</label>
+                <label class="check"><input type="checkbox" data-f="pinned" /> Pin to the top</label>
+                <label style="margin-top:1rem">Files</label>
+                <ul class="file-list" data-files></ul>
+                <label class="dropzone file-drop" data-drop>
+                    <svg class="ic"><use href="#i-upload" /></svg>
+                    <span class="grow"><strong>Add files</strong><br /><span class="small muted">PDF, Word, Excel, images. Choose several at once.</span></span>
+                    <input type="file" multiple accept="@MediaService.AcceptList" class="sr-only" data-upload />
+                </label>
+                <button type="button" class="btn sm" data-pick-library style="margin-top:.6rem">Choose from media library</button>
+                <p class="small muted" data-upload-state></p>
+            </div>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn primary" data-dialog-ok>Add notice</button>
+            <button type="button" class="btn quiet" data-close>Cancel</button>
+            <span class="spacer"></span>
+            <span class="hint">Notices are saved when you save the page.</span>
+        </div>
+    </div>
+</dialog>

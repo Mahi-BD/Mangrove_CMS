@@ -1,0 +1,57 @@
+@* Spreadsheet-style editor for table pages. State lives in the hidden #table-json field and is saved with the page. *@
+<section class="table-editor" id="table-editor" aria-label="Table">
+    <div class="te-bar">
+        <button type="button" class="btn" data-act="add-row"><svg class="ic"><use href="#i-plus" /></svg> Add row</button>
+        <button type="button" class="btn" data-act="add-col"><svg class="ic"><use href="#i-plus" /></svg> Add column</button>
+        <button type="button" class="btn" data-act="import"><svg class="ic"><use href="#i-upload" /></svg> Import from Excel</button>
+        <div class="search">
+            <svg class="ic"><use href="#i-search" /></svg>
+            <input type="search" placeholder="Find rows" aria-label="Find rows" data-filter />
+        </div>
+        <span class="spacer"></span>
+        <span class="muted small" data-count></span>
+    </div>
+
+    <div class="te-empty" data-empty hidden>
+        <svg class="ic"><use href="#i-table" /></svg>
+        <h2>Set up the table</h2>
+        <p class="muted">Start from a ready-made list, add columns one by one, or import a spreadsheet. The first row of the spreadsheet becomes the column names.</p>
+        <div class="actions">
+            <button type="button" class="btn primary" data-act="preset-officers">Officer list: SN, Name, Rank, Image, Phone</button>
+            <button type="button" class="btn" data-act="add-col">Add a column</button>
+            <button type="button" class="btn" data-act="import">Import from Excel</button>
+        </div>
+    </div>
+
+    <div class="te-scroll" data-scroll>
+        <table class="te-grid" data-grid>
+            <colgroup data-cols></colgroup>
+            <thead data-head></thead>
+            <tbody data-body></tbody>
+        </table>
+    </div>
+    <div class="te-foot" data-foot>
+        <span class="hint">Drag a column's edge to resize it. Drag the dots to move a row. Enter moves down.</span>
+        <nav class="te-pager" data-pager></nav>
+    </div>
+</section>
+
+<dialog id="import-dialog" class="media-picker te-dialog" aria-labelledby="import-title">
+    <div class="picker-head">
+        <h2 id="import-title">Import from Excel</h2>
+        <button type="button" class="btn sm quiet" data-close aria-label="Close"><svg class="ic"><use href="#i-x" /></svg></button>
+    </div>
+    <div class="te-dialog-body">
+        <p class="muted">Choose an .xlsx, .xls or .csv file. Its first row should hold the column names, for example <em>SN, Name, Rank, Image, Phone</em>. Column types are guessed from the names; you can change them afterwards.</p>
+        <label for="import-file">Spreadsheet</label>
+        <input id="import-file" type="file" accept=".xlsx,.xls,.csv" />
+        <fieldset style="margin-top:1rem" data-import-mode>
+            <legend>What to do with the current table</legend>
+            <label class="check"><input type="radio" name="import-mode" value="replace" checked /> Replace it with the spreadsheet</label>
+            <label class="check"><input type="radio" name="import-mode" value="append" /> Keep it and add the spreadsheet's rows below</label>
+        </fieldset>
+        <p class="small muted">Pictures inside an Excel file can't be imported. After importing, choose each photo in the Image column, or put image addresses (https://…) in the sheet.</p>
+        <p class="field-error" data-import-error></p>
+        <div class="actions"><button type="button" class="btn primary" data-import-go>Import</button><button type="button" class="btn quiet" data-close>Cancel</button></div>
+    </div>
+</dialog>

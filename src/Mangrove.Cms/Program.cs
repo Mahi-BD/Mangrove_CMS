@@ -76,6 +76,7 @@ builder.Services.AddScoped<MediaService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PostQueryService>();
 builder.Services.AddScoped<TableService>();
+builder.Services.AddScoped<NoticeService>();
 
 // Emit Bangla, Arabic, CJK… as real characters instead of &#x…; entities.
 builder.Services.AddWebEncoders(o => o.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
@@ -86,7 +87,11 @@ builder.Services.AddControllersWithViews(o =>
 });
 builder.Services.Configure<RazorViewEngineOptions>(o => o.ViewLocationExpanders.Add(new ThemeViewLocationExpander()));
 // Each file is limited to MediaService.MaxBytes; one request (e.g. a notice with several files) to MaxRequestBytes.
-builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = MediaService.MaxRequestBytes);
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = MediaService.MaxRequestBytes;
+    o.ValueLengthLimit = 32 * 1024 * 1024; // a large table is posted as one JSON field
+});
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = MediaService.MaxRequestBytes);
 
 // Running behind nginx / a reverse proxy.

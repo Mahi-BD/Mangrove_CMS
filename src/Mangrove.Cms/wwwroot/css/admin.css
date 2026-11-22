@@ -53,6 +53,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
     margin: 0;
@@ -431,7 +432,7 @@ tr:hover .row-actions, tr:focus-within .row-actions { visibility: visible; }
 .te-bar .search input[type=search] { width: 200px; }
 .te-state { font-size: .85rem; }
 .te-state.te-unsaved { color: var(--tannin); font-weight: 600; }
-.te-scroll { overflow: auto; max-height: calc(100vh - 260px); min-height: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.te-scroll { overflow: auto; max-height: calc(100vh - 220px); min-height: 160px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
 .te-grid { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: max-content; min-width: 100%; }
 .te-grid th, .te-grid td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 0; vertical-align: middle; background: var(--surface); }
 .te-grid thead th { position: sticky; top: 0; z-index: 2; background: var(--paper); padding: .45rem .5rem .4rem; text-align: left; vertical-align: top; }
@@ -489,3 +490,43 @@ tr:hover .row-actions, tr:focus-within .row-actions { visibility: visible; }
 .file-drop { cursor: pointer; margin: .5rem 0 0; padding: .8rem 1rem; flex-wrap: nowrap; font-weight: 400; color: var(--text); }
 .file-drop .grow { min-width: 0; }
 .file-drop .ic { width: 22px; height: 22px; }
+
+
+/* ---------- Table / notice editors inside the page editor ---------- */
+.sheet-head { padding-bottom: .2rem; }
+.table-editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: .9rem 1rem 0; margin-bottom: 1.25rem; }
+.table-editor .te-bar { margin-bottom: .75rem; }
+.table-editor .te-scroll { border-radius: var(--r-sm); }
+.table-editor .te-foot { padding: .6rem 0 .9rem; }
+.te-empty { text-align: center; padding: 2rem 1rem 2.25rem; border: 1.5px dashed var(--line-strong); border-radius: var(--r-md); margin-bottom: 1rem; }
+.te-empty > .ic { width: 34px; height: 34px; color: var(--brackish); }
+.te-empty h2 { margin: .5rem 0 .3rem; }
+.te-empty p { max-width: 52ch; margin: 0 auto; }
+.te-empty .actions { justify-content: center; }
+.intro-input { font-family: var(--serif); font-size: 15px; line-height: 1.65; margin-top: .3rem; }
+.save-hint { color: var(--tannin); font-weight: 550; }
+
+.notice-editor { padding-bottom: .5rem; }
+.ne-head { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.ne-head h2 { margin: 0 auto 0 0; }
+.ne-head .search input[type=search] { width: 200px; }
+.ne-list { list-style: none; margin: 0; padding: 0; }
+.ne-item { display: grid; grid-template-columns: 7rem minmax(0, 1fr) auto; gap: 1rem; align-items: start; padding: .85rem 0; border-top: 1px solid var(--line); }
+.ne-item.is-hidden .ne-title { color: var(--muted); }
+.ne-date { color: var(--muted); font-size: .88rem; font-variant-numeric: tabular-nums; padding-top: .1rem; }
+.ne-title { font-weight: 600; color: var(--ink); text-align: left; font-size: 1rem; }
+.ne-files { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .4rem; }
+.ne-file { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; padding: .1rem .5rem .1rem .15rem; border: 1px solid var(--line); border-radius: 4px; max-width: 18rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ne-file b, .ne-ext { display: inline-grid; place-items: center; min-width: 2.1rem; height: 1.2rem; padding: 0 .25rem; border-radius: 3px; background: var(--ink); color: var(--paper); font-size: .62rem; letter-spacing: .02em; }
+.ne-actions { display: flex; gap: .3rem; }
+.ne-none { padding: 1rem 0; border-top: 1px solid var(--line); }
+.ne-empty { text-align: center; padding: 1.75rem 1rem 1.5rem; color: var(--muted); border-top: 1px solid var(--line); }
+.ne-empty .ic { width: 30px; height: 30px; color: var(--brackish); }
+.ne-dialog { width: min(860px, 96vw); }
+.ne-dialog-body { padding: 1rem 1.25rem 1.25rem; }
+.ne-dialog-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.5rem; }
+.ne-dialog-grid label:first-child { margin-top: 0; }
+@media (max-width: 720px) {
+    .ne-dialog-grid { grid-template-columns: 1fr; gap: 0; }
+    .ne-item { grid-template-columns: minmax(0, 1fr); gap: .3rem; }
+}

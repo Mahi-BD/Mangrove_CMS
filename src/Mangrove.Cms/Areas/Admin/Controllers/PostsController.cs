@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mangrove.Cms.Data;
 using Mangrove.Cms.Models;
 using Mangrove.Cms.Services;
@@ -9,15 +10,20 @@ namespace Mangrove.Cms.Areas.Admin.Controllers;
 /// <summary>Posts and pages share one editor. Authors manage their own posts; pages need Editor.</summary>
 public class PostsController : AdminController
 {
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
     private readonly CmsDbContext _db;
     private readonly SlugService _slugs;
     private readonly ContentRenderer _renderer;
+    private readonly TableService _tables;
+    private readonly NoticeService _notices;
 
-    public PostsController(CmsDbContext db, SlugService slugs, ContentRenderer renderer)
+    public PostsController(CmsDbContext db, SlugService slugs, ContentRenderer renderer, TableService tables, NoticeService notices)
     {
         _db = db;
         _slugs = slugs;
         _renderer = renderer;
+        _tables = tables;
+        _notices = notices;
     }
 
     private bool CanEdit(Post p) =>
@@ -96,7 +102,11 @@ public class PostsController : AdminController
             IsSticky = post.IsSticky,
             CategoryIds = post.PostTerms.Where(pt => pt.Term!.Type == TermType.Category).Select(pt => pt.TermId).ToList(),
             Tags = string.Join(", ", post.PostTerms.Where(pt => pt.Term!.Type == TermType.Tag).Select(pt => pt.Term!.Name)),
+            ListPageSize = post.ListPageSize,
+            ListSearchable = post.ListSearchable,
         };
+        if (post.Kind == PageKind.Table) form.TableJson = await TableJsonAsync(post.Id);
+        if (post.Kind == PageKind.Notices) form.NoticesJson = await NoticesJsonAsync(post.Id);
         await FillLookups(form);
         return View(form);
     }
@@ -120,6 +130,20 @@ public class PostsController : AdminController
         if (form.ParentId != null && form.ParentId == form.Id)
             ModelState.AddModelError(nameof(form.ParentId), "A page can't be its own parent.");
 
+        var kind = post?.Kind ?? (form.Type == PostType.Page && Enum.IsDefined(form.Kind) ? form.Kind : PageKind.Standard);
+        form.Kind = kind;
+        TableSaveModel? table = null;
+        List<NoticeSaveModel>? notices = null;
+        try
+        {
+            if (kind == PageKind.Table) table = JsonSerializer.Deserialize<TableSaveModel>(form.TableJson ?? "{}", JsonOpts) ?? new();
+            if (kind == PageKind.Notices) notices = JsonSerializer.Deserialize<List<NoticeSaveModel>>(form.NoticesJson ?? "[]", JsonOpts) ?? new();
+        }
+        catch (JsonException)
+        {
+            ModelState.AddModelError("", "The table or notices couldn't be read. Reload the page and try again.");
+        }
+
         if (!ModelState.IsValid)
         {
             await FillLookups(form);
@@ -127,13 +151,13 @@ public class PostsController : AdminController
         }
 
         var now = DateTime.UtcNow;
-        var isNew = post == null;
+        await using var tx = await _db.Database.BeginTransactionAsync();
         if (post == null)
         {
             post = new Post
             {
                 Type = form.Type,
-                Kind = form.Type == PostType.Page && Enum.IsDefined(form.Kind) ? form.Kind : PageKind.Standard,
+                Kind = kind,
                 AuthorId = CurrentUserId,
                 CreatedAt = now,
                 AllowComments = false,
@@ -148,8 +172,13 @@ public class PostsController : AdminController
         post.MetaDescription = string.IsNullOrWhiteSpace(form.MetaDescription) ? null : form.MetaDescription.Trim();
         post.FeaturedMediaId = form.FeaturedMediaId is > 0 && await _db.Media.AnyAsync(m => m.Id == form.FeaturedMediaId)
             ? form.FeaturedMediaId : null;
-        post.AllowComments = form.AllowComments;
+        post.AllowComments = kind == PageKind.Standard && form.AllowComments;
         post.UpdatedAt = now;
+        if (kind != PageKind.Standard)
+        {
+            post.ListPageSize = Math.Clamp(form.ListPageSize, 0, 500);
+            post.ListSearchable = form.ListSearchable;
+        }
 
         if (post.Type == PostType.Page)
         {
@@ -172,6 +201,20 @@ public class PostsController : AdminController
         if (post.Type == PostType.Post) await ApplyTermsAsync(post, form);
 
         await _db.SaveChangesAsync();
+
+        // The table or notices are saved with the page, in the same transaction.
+        var contentError = table != null ? await _tables.SaveAsync(post.Id, table)
+            : notices != null ? await _notices.SyncAsync(post.Id, notices, CurrentUserId) : null;
+        if (contentError != null)
+        {
+            await tx.RollbackAsync();
+            _db.ChangeTracker.Clear();
+            ModelState.AddModelError("", contentError);
+            await FillLookups(form);
+            return View("Edit", form);
+        }
+        await tx.CommitAsync();
+
         Flash(post.Status switch
         {
             PostStatus.Published => $"{post.Type} published.",
@@ -179,9 +222,6 @@ public class PostsController : AdminController
             _ => "Draft saved.",
         });
 
-        // A brand-new table page or notice board goes straight to its content editor.
-        if (isNew && post.Kind == PageKind.Table) return RedirectToAction("Edit", "PageTable", new { id = post.Id });
-        if (isNew && post.Kind == PageKind.Notices) return RedirectToAction("Index", "Notices", new { id = post.Id });
         return RedirectToAction(nameof(Edit), new { id = post.Id });
     }
 
@@ -261,6 +301,35 @@ public class PostsController : AdminController
     public IActionResult Preview([FromForm] string? content) =>
         Content(_renderer.Render(content).Value ?? "", "text/html; charset=utf-8");
 
+    private async Task<string> TableJsonAsync(int postId)
+    {
+        var (cols, rows) = await _tables.LoadAsync(postId);
+        return JsonSerializer.Serialize(new
+        {
+            columns = cols.Select(c => new { key = c.Id.ToString(), name = c.Name, type = (int)c.Type, width = c.Width }),
+            rows = rows.Select(r => new { cells = TableService.ReadCells(r.Data) }),
+        }, JsonOpts);
+    }
+
+    private async Task<string> NoticesJsonAsync(int postId)
+    {
+        var list = await _db.Notices.AsNoTracking().Include(n => n.Attachments).ThenInclude(a => a.Media)
+            .Where(n => n.PostId == postId)
+            .OrderByDescending(n => n.IsPinned).ThenByDescending(n => n.NoticeDate).ThenByDescending(n => n.Id)
+            .ToListAsync();
+        return JsonSerializer.Serialize(list.Select(n => new
+        {
+            id = n.Id,
+            title = n.Title,
+            date = n.NoticeDate.ToString("yyyy-MM-dd"),
+            description = n.Description,
+            pinned = n.IsPinned,
+            published = n.IsPublished,
+            files = n.Attachments.OrderBy(a => a.SortOrder).Where(a => a.Media != null)
+                .Select(a => new { mediaId = a.MediaId, fileName = a.Media!.FileName, size = a.Media.SizeBytes, url = a.Media.Url }),
+        }), JsonOpts);
+    }
+
     private async Task FillLookups(PostEditForm form)
     {
         ViewBag.Categories = await _db.Terms.AsNoTracking().Where(t => t.Type == TermType.Category).OrderBy(t => t.Name).ToListAsync();
@@ -269,17 +338,7 @@ public class PostsController : AdminController
                 .OrderBy(p => p.Title).ToListAsync()
             : new List<Post>();
         ViewBag.Featured = form.FeaturedMediaId is > 0 ? await _db.Media.FindAsync(form.FeaturedMediaId) : null;
-        if (form.Id != 0 && form.Kind == PageKind.Table)
-        {
-            var cols = await _db.TableColumns.CountAsync(c => c.PostId == form.Id);
-            var rows = await _db.TableRows.CountAsync(r => r.PostId == form.Id);
-            ViewBag.ContentCount = cols == 0 ? "No columns yet. Add columns or import an Excel file."
-                : $"{rows:N0} {(rows == 1 ? "row" : "rows")} in {cols} {(cols == 1 ? "column" : "columns")}.";
-        }
-        else if (form.Id != 0 && form.Kind == PageKind.Notices)
-        {
-            var n = await _db.Notices.CountAsync(x => x.PostId == form.Id);
-            ViewBag.ContentCount = n == 0 ? "No notices yet." : $"{n:N0} {(n == 1 ? "notice" : "notices")}.";
-        }
+        if (form.Kind == PageKind.Table) form.TableJson ??= JsonSerializer.Serialize(new TableSaveModel(), JsonOpts);
+        if (form.Kind == PageKind.Notices) form.NoticesJson ??= "[]";
     }
 }

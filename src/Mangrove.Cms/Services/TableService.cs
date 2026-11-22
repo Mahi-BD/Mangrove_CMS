@@ -51,6 +51,57 @@ public partial class TableService
         return (cols, rows);
     }
 
+    // ---------- Save (from the page editor) ----------
+
+    /// <summary>Replaces a page's columns and rows. Returns an error message, or null on success.
+    /// Call inside the caller's transaction; changes are saved here.</summary>
+    public async Task<string?> SaveAsync(int postId, TableSaveModel model)
+    {
+        if (model.Columns.Count > MaxColumns) return $"A table can have at most {MaxColumns} columns.";
+        if (model.Rows.Count > MaxRows) return $"A table can have at most {MaxRows:N0} rows.";
+        if (model.Columns.Any(c => string.IsNullOrWhiteSpace(c.Name))) return "Every column needs a name.";
+
+        var existing = await _db.TableColumns.Where(c => c.PostId == postId).ToDictionaryAsync(c => c.Id.ToString());
+        var ordered = new List<TableColumn>();
+        foreach (var (c, i) in model.Columns.Select((c, i) => (c, i)))
+        {
+            if (!existing.Remove(c.Key, out var col))
+            {
+                col = new TableColumn { PostId = postId };
+                _db.TableColumns.Add(col);
+            }
+            var name = c.Name.Trim();
+            col.Name = name.Length > 120 ? name[..120] : name;
+            col.Type = Enum.IsDefined(c.Type) ? c.Type : ColumnType.Text;
+            col.Width = c.Width is >= 90 and <= 1200 ? c.Width : null;
+            col.SortOrder = i;
+            ordered.Add(col);
+        }
+        _db.TableColumns.RemoveRange(existing.Values); // columns the editor deleted
+        await _db.SaveChangesAsync();
+
+        // Every column now has a real id: translate the editor's keys.
+        var keyToId = model.Columns.Select((c, i) => (c.Key, Id: ordered[i].Id.ToString())).ToDictionary(x => x.Key, x => x.Id);
+        var serialIds = ordered.Where(c => c.Type == ColumnType.Serial).Select(c => c.Id.ToString()).ToHashSet();
+
+        await _db.TableRows.Where(r => r.PostId == postId).ExecuteDeleteAsync();
+        var order = 0;
+        foreach (var row in model.Rows)
+        {
+            var cells = new Dictionary<string, string>();
+            foreach (var (key, value) in row.Cells)
+            {
+                if (!keyToId.TryGetValue(key, out var colId) || serialIds.Contains(colId)) continue;
+                var v = (value ?? "").Trim();
+                cells[colId] = v.Length > 4000 ? v[..4000] : v;
+            }
+            if (cells.Values.All(string.IsNullOrEmpty)) continue; // skip empty rows
+            _db.TableRows.Add(new TableRow { PostId = postId, SortOrder = order++, Data = WriteCells(cells) });
+        }
+        await _db.SaveChangesAsync();
+        return null;
+    }
+
     // ---------- Import ----------
 
     /// <summary>Reads the first sheet of an .xlsx/.xls/.csv file. The first non-empty row is the header row.</summary>
@@ -126,61 +177,6 @@ public partial class TableService
 
     [GeneratedRegex(@"^(s\.?\s*l\.?|s\.?\s*n\.?|s/n|serial( no\.?)?|no\.?|#|ক্রমিক( নং)?|ক্র\.?\s*নং)$")]
     private static partial Regex SerialHeader();
-
-    /// <summary>Replaces (or appends to) a table with the contents of a spreadsheet.</summary>
-    public async Task<(int columns, int rows)> ImportAsync(int postId, ImportedSheet sheet, bool replace)
-    {
-        var columns = await _db.TableColumns.Where(c => c.PostId == postId).OrderBy(c => c.SortOrder).ToListAsync();
-
-        if (replace)
-        {
-            await _db.TableRows.Where(r => r.PostId == postId).ExecuteDeleteAsync();
-            _db.TableColumns.RemoveRange(columns);
-            await _db.SaveChangesAsync();
-            columns = new();
-        }
-
-        // Match spreadsheet headers to existing columns by name; add any new ones.
-        var map = new List<TableColumn?>();
-        for (var i = 0; i < sheet.Headers.Count; i++)
-        {
-            var header = sheet.Headers[i];
-            var col = columns.FirstOrDefault(c => string.Equals(c.Name, header, StringComparison.OrdinalIgnoreCase));
-            if (col == null)
-            {
-                if (columns.Count >= MaxColumns) { map.Add(null); continue; }
-                var idx = i;
-                col = new TableColumn
-                {
-                    PostId = postId,
-                    Name = header.Length > 120 ? header[..120] : header,
-                    Type = GuessType(header, sheet.Rows.Select(r => idx < r.Count ? r[idx] : "")),
-                    SortOrder = columns.Count,
-                };
-                _db.TableColumns.Add(col);
-                columns.Add(col);
-            }
-            map.Add(col);
-        }
-        await _db.SaveChangesAsync();
-
-        var start = await _db.TableRows.Where(r => r.PostId == postId).MaxAsync(r => (int?)r.SortOrder) ?? -1;
-        var added = 0;
-        foreach (var values in sheet.Rows)
-        {
-            var cells = new Dictionary<string, string>();
-            for (var i = 0; i < map.Count && i < values.Count; i++)
-            {
-                var col = map[i];
-                if (col == null || col.Type == ColumnType.Serial) continue;
-                cells[col.Id.ToString()] = values[i];
-            }
-            _db.TableRows.Add(new TableRow { PostId = postId, SortOrder = start + 1 + added, Data = WriteCells(cells) });
-            added++;
-        }
-        await _db.SaveChangesAsync();
-        return (columns.Count, added);
-    }
 
     // ---------- Display helpers ----------
 

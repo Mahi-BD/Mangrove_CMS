@@ -78,8 +78,6 @@
                         else
                         {
                             <a href="/admin/posts/edit/@p.Id">Edit</a>
-                            @if (isPage && p.Kind == PageKind.Table) { <a href="/admin/pagetable/edit/@p.Id">Edit table</a> }
-                            @if (isPage && p.Kind == PageKind.Notices) { <a href="/admin/notices/index/@p.Id">Manage notices</a> }
                             <a href="/@p.Slug" target="_blank">@(p.Status == PostStatus.Published ? "View" : "Preview")</a>
                             <form method="post" asp-antiforgery="true" action="/admin/posts/trash/@p.Id" class="inline"><button class="linklike danger">Move to trash</button></form>
                         }

@@ -163,13 +163,26 @@ public class PostEditForm
     /// <summary>Pages only. Chosen when the page is created and fixed afterwards.</summary>
     public PageKind Kind { get; set; } = PageKind.Standard;
 
+    /// <summary>Table pages: the whole table as JSON (TableSaveModel), kept in a hidden field by the grid editor.</summary>
+    public string? TableJson { get; set; }
+
+    /// <summary>Notice boards: all notices as JSON (list of NoticeSaveModel plus display-only file info).</summary>
+    public string? NoticesJson { get; set; }
+
+    /// <summary>Table and notice pages: rows per page on the site, 0 = everything on one page.</summary>
+    [Display(Name = "Rows per page")]
+    public int ListPageSize { get; set; } = 25;
+
+    [Display(Name = "Show a search box")]
+    public bool ListSearchable { get; set; } = true;
+
     [Required, MaxLength(300)]
     public string Title { get; set; } = "";
 
     [MaxLength(200)]
     public string? Slug { get; set; }
 
-    public string Content { get; set; } = "";
+    public string? Content { get; set; }
 
     [MaxLength(1000)]
     public string? Excerpt { get; set; }
