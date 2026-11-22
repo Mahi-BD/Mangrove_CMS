@@ -1,0 +1,73 @@
+@model List<MenuItem>
+@{
+    ViewData["Title"] = "Menus";
+    var location = (string)ViewBag.Location;
+    var pages = (List<Post>)ViewBag.Pages;
+    var categories = (List<Term>)ViewBag.Categories;
+}
+<div class="page-head"><h1>Menus</h1></div>
+<nav class="filters toolbar">
+    @foreach (var loc in Mangrove.Cms.Areas.Admin.Controllers.MenusController.Locations)
+    {
+        <a class="@(loc == location ? "active" : null)" href="/admin/menus?location=@loc">@(char.ToUpper(loc[0]) + loc[1..]) menu</a>
+    }
+</nav>
+<div class="grid-side">
+    <div>
+        <section class="panel">
+            <h2>Add a custom link</h2>
+            <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="stack">
+                <input type="hidden" name="location" value="@location" />
+                <label>Label <input name="label" required maxlength="120" /></label>
+                <label>URL <input name="url" required placeholder="/about or https://…" maxlength="500" /></label>
+                <label class="check"><input type="checkbox" name="openInNewTab" value="true" /> Open in a new tab</label>
+                <button class="btn primary">Add to menu</button>
+            </form>
+        </section>
+        @if (pages.Count > 0 || categories.Count > 0)
+        {
+            <section class="panel">
+                <h2>Quick add</h2>
+                <div class="quick-add">
+                    @foreach (var p in pages)
+                    {
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="inline">
+                            <input type="hidden" name="location" value="@location" /><input type="hidden" name="label" value="@p.Title" /><input type="hidden" name="url" value="/@p.Slug" />
+                            <button class="chip">+ @p.Title</button>
+                        </form>
+                    }
+                    @foreach (var c in categories)
+                    {
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="inline">
+                            <input type="hidden" name="location" value="@location" /><input type="hidden" name="label" value="@c.Name" /><input type="hidden" name="url" value="/category/@c.Slug" />
+                            <button class="chip">+ @c.Name</button>
+                        </form>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+    <section class="panel">
+        <h2>Menu structure</h2>
+        @if (Model.Count == 0) { <p class="muted">This menu is empty.</p> }
+        <ol class="menu-items">
+            @for (var i = 0; i < Model.Count; i++)
+            {
+                var m = Model[i];
+                <li>
+                    <form method="post" asp-antiforgery="true" action="/admin/menus/update/@m.Id" class="menu-row">
+                        <input name="label" value="@m.Label" aria-label="Label" required />
+                        <input name="url" value="@m.Url" aria-label="URL" required />
+                        <label class="check small"><input type="checkbox" name="openInNewTab" value="true" checked="@m.OpenInNewTab" /> New tab</label>
+                        <button class="btn">Save</button>
+                    </form>
+                    <div class="menu-tools">
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="-1" /><button class="btn icon" disabled="@(i == 0)" aria-label="Move up">↑</button></form>
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="1" /><button class="btn icon" disabled="@(i == Model.Count - 1)" aria-label="Move down">↓</button></form>
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/delete/@m.Id" class="inline"><button class="btn icon danger" aria-label="Remove">✕</button></form>
+                    </div>
+                </li>
+            }
+        </ol>
+    </section>
+</div>

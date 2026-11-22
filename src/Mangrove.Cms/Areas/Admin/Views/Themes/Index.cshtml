@@ -1,0 +1,22 @@
+@model IReadOnlyList<ThemeInfo>
+@{ ViewData["Title"] = "Themes"; var active = (string)ViewBag.Active; }
+<div class="page-head"><h1>Themes</h1></div>
+<p class="muted">Themes live in <code>Themes/&lt;Name&gt;/</code>. A theme only needs to override the views it changes; anything missing falls back to the default <em>Mangrove</em> theme.</p>
+<div class="theme-grid">
+    @foreach (var t in Model)
+    {
+        var isActive = string.Equals(t.Folder, active, StringComparison.OrdinalIgnoreCase);
+        <article class="panel theme-card @(isActive ? "active" : null)">
+            <h2>@t.Name @if (isActive) { <span class="status status-published">Active</span> }</h2>
+            <p>@t.Description</p>
+            <p class="small muted">@t.Author @(string.IsNullOrEmpty(t.Version) ? "" : "· v" + t.Version)</p>
+            @if (!isActive)
+            {
+                <form method="post" asp-antiforgery="true" action="/admin/themes/activate">
+                    <input type="hidden" name="folder" value="@t.Folder" />
+                    <button class="btn primary">Activate</button>
+                </form>
+            }
+        </article>
+    }
+</div>

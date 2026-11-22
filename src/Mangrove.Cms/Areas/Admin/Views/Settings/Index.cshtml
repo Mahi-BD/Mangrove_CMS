@@ -1,0 +1,35 @@
+@model SettingsForm
+@{ ViewData["Title"] = "Settings"; var pages = (List<Post>)ViewBag.Pages; }
+<div class="page-head"><h1>Settings</h1></div>
+<form method="post" class="stack narrow-form">
+    <div asp-validation-summary="ModelOnly" class="errors"></div>
+    <section class="panel stack">
+        <h2>General</h2>
+        <label asp-for="SiteTitle"></label>
+        <input asp-for="SiteTitle" />
+        <span asp-validation-for="SiteTitle" class="field-error"></span>
+        <label asp-for="Tagline"></label>
+        <input asp-for="Tagline" />
+        <label asp-for="FooterText"></label>
+        <input asp-for="FooterText" />
+    </section>
+    <section class="panel stack">
+        <h2>Reading</h2>
+        <label asp-for="HomePageId"></label>
+        <select asp-for="HomePageId">
+            <option value="">Latest posts</option>
+            @foreach (var p in pages) { <option value="@p.Id">Page: @p.Title</option> }
+        </select>
+        <small class="muted">With a static homepage, the post list is still at <a href="/blog" target="_blank">/blog</a>.</small>
+        <label asp-for="PostsPerPage"></label>
+        <input asp-for="PostsPerPage" type="number" min="1" max="100" />
+        <span asp-validation-for="PostsPerPage" class="field-error"></span>
+    </section>
+    <section class="panel stack">
+        <h2>Discussion &amp; membership</h2>
+        <label class="check"><input asp-for="CommentsEnabled" /> Allow people to comment on posts</label>
+        <label class="check"><input asp-for="CommentModeration" /> Hold new comments for approval</label>
+        <label class="check"><input asp-for="AllowRegistration" /> Anyone can register (as Subscriber)</label>
+    </section>
+    <div><button class="btn primary">Save changes</button></div>
+</form>

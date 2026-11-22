@@ -1,0 +1,85 @@
+@model PagedResult<Post>
+@{
+    var type = (PostType)ViewBag.Type;
+    var status = ViewBag.Status as PostStatus?;
+    var counts = (Dictionary<PostStatus, int>)ViewBag.Counts;
+    var q = ViewBag.Q as string;
+    var label = type == PostType.Page ? "Pages" : "Posts";
+    ViewData["Title"] = label;
+    ViewData["PostType"] = type.ToString();
+    int Count(PostStatus s) => counts.TryGetValue(s, out var c) ? c : 0;
+    var all = counts.Where(kv => kv.Key != PostStatus.Trash).Sum(kv => kv.Value);
+    string Url(PostStatus? s, int page = 1) =>
+        $"/admin/posts?type={type}{(s.HasValue ? "&status=" + s : "")}{(string.IsNullOrEmpty(q) ? "" : "&q=" + Uri.EscapeDataString(q))}{(page > 1 ? "&page=" + page : "")}";
+}
+<div class="page-head">
+    <h1>@label</h1>
+    <a class="btn primary" href="/admin/posts/create?type=@type">Add new</a>
+</div>
+
+<div class="toolbar">
+    <nav class="filters">
+        <a class="@(status == null ? "active" : null)" href="@Url(null)">All (@all)</a>
+        <a class="@(status == PostStatus.Published ? "active" : null)" href="@Url(PostStatus.Published)">Published (@Count(PostStatus.Published))</a>
+        <a class="@(status == PostStatus.Draft ? "active" : null)" href="@Url(PostStatus.Draft)">Drafts (@Count(PostStatus.Draft))</a>
+        <a class="@(status == PostStatus.Scheduled ? "active" : null)" href="@Url(PostStatus.Scheduled)">Scheduled (@Count(PostStatus.Scheduled))</a>
+        <a class="@(status == PostStatus.Trash ? "active" : null)" href="@Url(PostStatus.Trash)">Trash (@Count(PostStatus.Trash))</a>
+    </nav>
+    <form method="get" class="search">
+        <input type="hidden" name="type" value="@type" />
+        @if (status.HasValue) { <input type="hidden" name="status" value="@status" /> }
+        <input type="search" name="q" value="@q" placeholder="Search @label.ToLowerInvariant()…" aria-label="Search" />
+        <button type="submit" class="btn">Search</button>
+    </form>
+</div>
+
+<div class="table-wrap">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            @if (type == PostType.Post) { <th>Categories</th> <th>Tags</th> }
+            <th>Status</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Items.Count == 0)
+        {
+            <tr><td colspan="6" class="muted">Nothing found.</td></tr>
+        }
+        @foreach (var p in Model.Items)
+        {
+            <tr>
+                <td>
+                    <a class="row-title" href="/admin/posts/edit/@p.Id">@p.Title</a>
+                    @if (p.IsSticky) { <span class="status">Sticky</span> }
+                    <div class="row-actions">
+                        @if (p.Status == PostStatus.Trash)
+                        {
+                            <form method="post" asp-antiforgery="true" action="/admin/posts/restore/@p.Id" class="inline"><button class="linklike">Restore</button></form>
+                            <form method="post" asp-antiforgery="true" action="/admin/posts/delete/@p.Id" class="inline" data-confirm="Delete “@p.Title” forever?"><button class="linklike danger">Delete permanently</button></form>
+                        }
+                        else
+                        {
+                            <a href="/admin/posts/edit/@p.Id">Edit</a>
+                            <a href="/@p.Slug" target="_blank">@(p.Status == PostStatus.Published ? "View" : "Preview")</a>
+                            <form method="post" asp-antiforgery="true" action="/admin/posts/trash/@p.Id" class="inline"><button class="linklike danger">Trash</button></form>
+                        }
+                    </div>
+                </td>
+                <td>@(p.Author?.DisplayName ?? p.Author?.UserName)</td>
+                @if (type == PostType.Post)
+                {
+                    <td>@string.Join(", ", p.PostTerms.Where(t => t.Term?.Type == TermType.Category).Select(t => t.Term!.Name))</td>
+                    <td>@string.Join(", ", p.PostTerms.Where(t => t.Term?.Type == TermType.Tag).Select(t => t.Term!.Name))</td>
+                }
+                <td><span class="status status-@p.Status.ToString().ToLowerInvariant()">@p.Status</span></td>
+                <td><small>@((p.PublishedAt ?? p.UpdatedAt).ToString("yyyy-MM-dd HH:mm"))</small></td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, (Func<int, string>)(n => Url(status, n)))" />

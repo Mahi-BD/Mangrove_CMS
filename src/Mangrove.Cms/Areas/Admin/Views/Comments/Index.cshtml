@@ -1,0 +1,59 @@
+@model PagedResult<Comment>
+@{
+    ViewData["Title"] = "Comments";
+    var status = ViewBag.Status as CommentStatus?;
+    var counts = (Dictionary<CommentStatus, int>)ViewBag.Counts;
+    int Count(CommentStatus s) => counts.TryGetValue(s, out var c) ? c : 0;
+}
+<div class="page-head"><h1>Comments</h1></div>
+<nav class="filters toolbar">
+    <a class="@(status == null ? "active" : null)" href="/admin/comments">All (@(Count(CommentStatus.Pending) + Count(CommentStatus.Approved)))</a>
+    <a class="@(status == CommentStatus.Pending ? "active" : null)" href="/admin/comments?status=Pending">Pending (@Count(CommentStatus.Pending))</a>
+    <a class="@(status == CommentStatus.Approved ? "active" : null)" href="/admin/comments?status=Approved">Approved (@Count(CommentStatus.Approved))</a>
+    <a class="@(status == CommentStatus.Spam ? "active" : null)" href="/admin/comments?status=Spam">Spam (@Count(CommentStatus.Spam))</a>
+    <a class="@(status == CommentStatus.Trash ? "active" : null)" href="/admin/comments?status=Trash">Trash (@Count(CommentStatus.Trash))</a>
+</nav>
+
+<div class="table-wrap">
+<table class="table">
+    <thead><tr><th>Author</th><th>Comment</th><th>In response to</th><th>Submitted</th></tr></thead>
+    <tbody>
+        @if (Model.Items.Count == 0) { <tr><td colspan="4" class="muted">No comments here.</td></tr> }
+        @foreach (var c in Model.Items)
+        {
+            <tr class="@(c.Status == CommentStatus.Pending ? "pending" : null)">
+                <td>
+                    <strong>@c.AuthorName</strong>
+                    @if (!string.IsNullOrEmpty(c.AuthorEmail)) { <div class="small muted">@c.AuthorEmail</div> }
+                    @if (!string.IsNullOrEmpty(c.IpAddress)) { <div class="small muted">@c.IpAddress</div> }
+                </td>
+                <td>
+                    <div class="comment-text">@c.Content</div>
+                    <div class="row-actions">
+                        @foreach (var target in new[] { CommentStatus.Approved, CommentStatus.Pending, CommentStatus.Spam, CommentStatus.Trash }.Where(s => s != c.Status))
+                        {
+                            var verb = target switch { CommentStatus.Approved => "Approve", CommentStatus.Pending => "Unapprove", CommentStatus.Spam => "Spam", _ => "Trash" };
+                            <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Id" class="inline">
+                                <input type="hidden" name="status" value="@target" />
+                                <input type="hidden" name="from" value="@status" />
+                                <button class="linklike @(target is CommentStatus.Spam or CommentStatus.Trash ? "danger" : null)">@verb</button>
+                            </form>
+                        }
+                        @if (c.Status is CommentStatus.Spam or CommentStatus.Trash)
+                        {
+                            <form method="post" asp-antiforgery="true" action="/admin/comments/delete/@c.Id" class="inline" data-confirm="Delete this comment forever?">
+                                <input type="hidden" name="from" value="@status" />
+                                <button class="linklike danger">Delete permanently</button>
+                            </form>
+                        }
+                    </div>
+                </td>
+                <td><a href="/@c.Post?.Slug#comment-@c.Id" target="_blank">@c.Post?.Title</a></td>
+                <td><small>@c.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small></td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
+@{ Func<int, string> pageUrl = n => $"/admin/comments?page={n}{(status.HasValue ? "&status=" + status : "")}"; }
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, pageUrl)" />

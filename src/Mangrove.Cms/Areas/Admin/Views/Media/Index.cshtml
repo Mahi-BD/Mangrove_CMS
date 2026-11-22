@@ -1,0 +1,47 @@
+@model PagedResult<Media>
+@{ ViewData["Title"] = "Media"; var q = ViewBag.Q as string; }
+<div class="page-head">
+    <h1>Media library</h1>
+</div>
+
+<form method="post" asp-antiforgery="true" action="/admin/media/upload" enctype="multipart/form-data" class="dropzone" data-dropzone>
+    <p><strong>Drop files here</strong> or</p>
+    <label class="btn primary">Select files<input type="file" name="files" multiple hidden accept="@MediaService.AcceptList" onchange="this.form.submit()" /></label>
+    <p class="muted small">Images, PDFs, office documents, audio and video · up to @(MediaService.MaxBytes / 1024 / 1024) MB each</p>
+</form>
+
+<form method="get" class="search toolbar">
+    <input type="search" name="q" value="@q" placeholder="Search by file name…" aria-label="Search" />
+    <button class="btn">Search</button>
+</form>
+
+@if (Model.Items.Count == 0)
+{
+    <p class="muted">No files yet.</p>
+}
+<div class="media-grid">
+    @foreach (var m in Model.Items)
+    {
+        <details class="media-item">
+            <summary>
+                @if (m.IsImage) { <img src="@m.Url" alt="@m.AltText" loading="lazy" /> }
+                else { <span class="file-icon">@System.IO.Path.GetExtension(m.FileName).TrimStart('.').ToUpperInvariant()</span> }
+                <span class="media-name">@m.FileName</span>
+            </summary>
+            <div class="media-detail">
+                <p class="small muted">@m.ContentType · @(m.SizeBytes / 1024) KB · @m.UploadedAt.ToString("yyyy-MM-dd")</p>
+                <label>URL <input readonly value="@m.Url" onclick="this.select()" /></label>
+                <form method="post" asp-antiforgery="true" action="/admin/media/update/@m.Id" class="stack">
+                    <label>Alt text <input name="altText" value="@m.AltText" /></label>
+                    <label>Caption <input name="caption" value="@m.Caption" /></label>
+                    <button class="btn">Save</button>
+                </form>
+                <form method="post" asp-antiforgery="true" action="/admin/media/delete/@m.Id" data-confirm="Delete @m.FileName? Posts using it will show a broken image.">
+                    <button class="linklike danger">Delete permanently</button>
+                </form>
+            </div>
+        </details>
+    }
+</div>
+@{ Func<int, string> pageUrl = n => $"/admin/media?page={n}{(string.IsNullOrEmpty(q) ? "" : "&q=" + Uri.EscapeDataString(q))}"; }
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, pageUrl)" />

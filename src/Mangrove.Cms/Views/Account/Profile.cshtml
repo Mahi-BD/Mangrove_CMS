@@ -1,0 +1,30 @@
+@model ProfileForm
+@{ ViewData["Title"] = "Your profile"; }
+<section class="form-page">
+    <h1>Your profile</h1>
+    @if (ViewData["Saved"] is string saved)
+    {
+        <p class="notice" role="status">@saved</p>
+    }
+    <form method="post" asp-action="Profile" class="stack">
+        <div asp-validation-summary="ModelOnly" class="errors"></div>
+        <label asp-for="DisplayName"></label>
+        <input asp-for="DisplayName" />
+        <label asp-for="Email"></label>
+        <input asp-for="Email" autocomplete="email" />
+        <span asp-validation-for="Email" class="field-error"></span>
+        <label asp-for="Bio"></label>
+        <textarea asp-for="Bio" rows="4"></textarea>
+        <fieldset>
+            <legend>Change password</legend>
+            <label asp-for="CurrentPassword"></label>
+            <input asp-for="CurrentPassword" autocomplete="current-password" />
+            <span asp-validation-for="CurrentPassword" class="field-error"></span>
+            <label asp-for="NewPassword"></label>
+            <input asp-for="NewPassword" autocomplete="new-password" />
+            <span asp-validation-for="NewPassword" class="field-error"></span>
+        </fieldset>
+        <button type="submit">Save profile</button>
+    </form>
+    <form method="post" asp-antiforgery="true" action="/account/logout"><button type="submit" class="linklike">Log out</button></form>
+</section>

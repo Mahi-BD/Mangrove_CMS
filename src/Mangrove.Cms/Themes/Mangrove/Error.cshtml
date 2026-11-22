@@ -1,0 +1,6 @@
+@{ ViewData["Title"] = "Something went wrong"; var code = ViewData["Code"] ?? 500; }
+<section class="notfound">
+    <h1>Something went wrong (@code)</h1>
+    <p>The request couldn't be completed. Please try again in a moment.</p>
+    <p><a href="/">← Back to the homepage</a></p>
+</section>

@@ -1,0 +1,28 @@
+/* Minimal — loads on top of the Mangrove stylesheet and only changes what differs. */
+:root {
+    --bg: #fffefb;
+    --surface: #fffefb;
+    --brand: #1f2937;
+    --brand-strong: #000;
+    --header: transparent;
+    --header-text: #1f2937;
+}
+@media (prefers-color-scheme: dark) {
+    :root { --bg: #111; --surface: #111; --brand: #e5e5e5; --brand-strong: #fff; --header-text: #e5e5e5; }
+}
+body.theme-minimal { font-family: var(--serif); font-size: 19px; }
+.wrap.narrow { max-width: 700px; }
+.theme-minimal .site-header { border-bottom: 1px solid var(--border); padding: 2.5rem 0 1.5rem; text-align: center; }
+.theme-minimal .site-title { color: var(--text); font-size: 2rem; }
+.theme-minimal .site-title:hover { color: var(--muted); }
+.theme-minimal .site-nav { margin-top: 1rem; }
+.theme-minimal .menu { justify-content: center; }
+.theme-minimal .site-nav .menu a { color: var(--muted); font-family: var(--sans); font-size: .9rem; }
+.theme-minimal .site-nav .menu .current a, .theme-minimal .site-nav .menu a:hover { color: var(--text); border-bottom-color: var(--text); }
+.theme-minimal .content { padding-top: 3rem; padding-bottom: 4rem; }
+.theme-minimal .card { border: 0; border-radius: 0; border-bottom: 1px solid var(--border); background: none; }
+.theme-minimal .card-body { padding: 0 0 2rem; }
+.theme-minimal .card-image { display: none; }
+.theme-minimal .site-footer { text-align: center; }
+.theme-minimal .site-footer .wrap { padding: 2rem 1.25rem; }
+.theme-minimal .site-footer .menu { justify-content: center; margin-bottom: .5rem; }

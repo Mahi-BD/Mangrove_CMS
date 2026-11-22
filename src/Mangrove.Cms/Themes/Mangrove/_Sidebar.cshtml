@@ -1,0 +1,38 @@
+@inject PostQueryService Posts
+@{
+    var recent = await Posts.RecentAsync(5);
+    var categories = await Posts.TermsWithCountsAsync(TermType.Category);
+}
+<section class="widget">
+    <form action="/search" method="get" role="search" class="search-form">
+        <label for="sidebar-q" class="sr-only">Search</label>
+        <input id="sidebar-q" type="search" name="q" placeholder="Search…" value="@Context.Request.Query["q"]" />
+        <button type="submit">Search</button>
+    </form>
+</section>
+
+@if (recent.Count > 0)
+{
+    <section class="widget">
+        <h2 class="widget-title">Recent posts</h2>
+        <ul>
+            @foreach (var p in recent)
+            {
+                <li><a href="/@p.Slug">@p.Title</a></li>
+            }
+        </ul>
+    </section>
+}
+
+@if (categories.Count > 0)
+{
+    <section class="widget">
+        <h2 class="widget-title">Categories</h2>
+        <ul>
+            @foreach (var c in categories)
+            {
+                <li><a href="/category/@c.Slug">@c.Name</a></li>
+            }
+        </ul>
+    </section>
+}

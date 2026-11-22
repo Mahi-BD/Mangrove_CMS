@@ -1,0 +1,204 @@
+using Mangrove.Cms.Data;
+using Mangrove.Cms.Models;
+using Mangrove.Cms.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Mangrove.Cms.Areas.Admin.Controllers;
+
+/// <summary>Categories and tags.</summary>
+[Authorize(Policy = Policies.Editor)]
+public class TermsController : AdminController
+{
+    private readonly CmsDbContext _db;
+    private readonly SlugService _slugs;
+
+    public TermsController(CmsDbContext db, SlugService slugs)
+    {
+        _db = db;
+        _slugs = slugs;
+    }
+
+    public async Task<IActionResult> Index(TermType type = TermType.Category, int? edit = null)
+    {
+        var terms = await _db.Terms.AsNoTracking().Where(t => t.Type == type).OrderBy(t => t.Name)
+            .Select(t => new { Term = t, Count = t.PostTerms.Count })
+            .ToListAsync();
+        ViewBag.Type = type;
+        ViewBag.Counts = terms.ToDictionary(x => x.Term.Id, x => x.Count);
+        ViewBag.Editing = edit.HasValue ? terms.FirstOrDefault(x => x.Term.Id == edit)?.Term : null;
+        return View(terms.Select(x => x.Term).ToList());
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Save(int id, TermType type, string name, string? slug, string? description, int? parentId)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Flash("Name is required.", "error");
+            return RedirectToAction(nameof(Index), new { type });
+        }
+
+        var term = id == 0 ? new Term { Type = type } : await _db.Terms.FindAsync(id);
+        if (term == null) return NotFound();
+        if (id == 0) _db.Terms.Add(term);
+
+        term.Name = name.Trim();
+        term.Slug = await _slugs.UniqueTermSlugAsync(slug, name, term.Type, id == 0 ? null : id);
+        term.Description = description?.Trim();
+        term.ParentId = term.Type == TermType.Category && parentId is > 0 && parentId != id ? parentId : null;
+        await _db.SaveChangesAsync();
+
+        Flash(id == 0 ? $"Added “{term.Name}”." : "Saved.");
+        return RedirectToAction(nameof(Index), new { type = term.Type });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var term = await _db.Terms.FindAsync(id);
+        if (term == null) return NotFound();
+        if (term.Type == TermType.Category && await _db.Terms.CountAsync(t => t.Type == TermType.Category) == 1)
+        {
+            Flash("Keep at least one category.", "error");
+            return RedirectToAction(nameof(Index), new { type = term.Type });
+        }
+        _db.Terms.Remove(term);
+        await _db.SaveChangesAsync();
+        Flash($"Deleted “{term.Name}”.");
+        return RedirectToAction(nameof(Index), new { type = term.Type });
+    }
+}
+
+[Authorize(Policy = Policies.Editor)]
+public class CommentsController : AdminController
+{
+    private readonly CmsDbContext _db;
+    public CommentsController(CmsDbContext db) => _db = db;
+
+    public async Task<IActionResult> Index(CommentStatus? status = null, int page = 1)
+    {
+        var all = _db.Comments.AsNoTracking();
+        var counts = await all.GroupBy(c => c.Status).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
+        ViewBag.Counts = counts.ToDictionary(c => c.Key, c => c.Count);
+        ViewBag.Status = status;
+
+        var query = status.HasValue ? all.Where(c => c.Status == status) : all.Where(c => c.Status == CommentStatus.Pending || c.Status == CommentStatus.Approved);
+        const int size = 30;
+        page = Math.Max(1, page);
+        var total = await query.CountAsync();
+        var items = await query.Include(c => c.Post).OrderByDescending(c => c.CreatedAt)
+            .Skip((page - 1) * size).Take(size).ToListAsync();
+        return View(new PagedResult<Comment>(items, page, size, total));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetStatus(int id, CommentStatus status, CommentStatus? from)
+    {
+        var c = await _db.Comments.FindAsync(id);
+        if (c == null) return NotFound();
+        c.Status = status;
+        await _db.SaveChangesAsync();
+        Flash($"Comment marked {status.ToString().ToLowerInvariant()}.");
+        return RedirectToAction(nameof(Index), new { status = from });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Delete(int id, CommentStatus? from)
+    {
+        var c = await _db.Comments.FindAsync(id);
+        if (c == null) return NotFound();
+        _db.Comments.Remove(c);
+        await _db.SaveChangesAsync();
+        Flash("Comment deleted permanently.");
+        return RedirectToAction(nameof(Index), new { status = from });
+    }
+}
+
+[Authorize(Policy = Policies.Editor)]
+public class MenusController : AdminController
+{
+    public static readonly string[] Locations = { "primary", "footer" };
+    private readonly CmsDbContext _db;
+    public MenusController(CmsDbContext db) => _db = db;
+
+    public async Task<IActionResult> Index(string location = "primary")
+    {
+        if (!Locations.Contains(location)) location = "primary";
+        ViewBag.Location = location;
+        ViewBag.Pages = await _db.Posts.AsNoTracking()
+            .Where(p => p.Type == PostType.Page && p.Status == PostStatus.Published).OrderBy(p => p.Title).ToListAsync();
+        ViewBag.Categories = await _db.Terms.AsNoTracking().Where(t => t.Type == TermType.Category).OrderBy(t => t.Name).ToListAsync();
+        var items = await _db.MenuItems.AsNoTracking().Where(m => m.Location == location).OrderBy(m => m.SortOrder).ToListAsync();
+        return View(items);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Add(string location, string label, string url, bool openInNewTab = false)
+    {
+        if (!Locations.Contains(location) || string.IsNullOrWhiteSpace(label) || !IsSafeUrl(url))
+        {
+            Flash("Enter a label and a link starting with /, http:// or https://.", "error");
+            return RedirectToAction(nameof(Index), new { location });
+        }
+        var max = await _db.MenuItems.Where(m => m.Location == location).MaxAsync(m => (int?)m.SortOrder) ?? -1;
+        _db.MenuItems.Add(new MenuItem { Location = location, Label = label.Trim(), Url = url.Trim(), OpenInNewTab = openInNewTab, SortOrder = max + 1 });
+        await _db.SaveChangesAsync();
+        Flash($"Added “{label.Trim()}”.");
+        return RedirectToAction(nameof(Index), new { location });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Update(int id, string label, string url, bool openInNewTab = false)
+    {
+        var item = await _db.MenuItems.FindAsync(id);
+        if (item == null) return NotFound();
+        if (string.IsNullOrWhiteSpace(label) || !IsSafeUrl(url))
+        {
+            Flash("Enter a label and a link starting with /, http:// or https://.", "error");
+            return RedirectToAction(nameof(Index), new { location = item.Location });
+        }
+        item.Label = label.Trim();
+        item.Url = url.Trim();
+        item.OpenInNewTab = openInNewTab;
+        await _db.SaveChangesAsync();
+        Flash("Menu item saved.");
+        return RedirectToAction(nameof(Index), new { location = item.Location });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Move(int id, int direction)
+    {
+        var item = await _db.MenuItems.FindAsync(id);
+        if (item == null) return NotFound();
+        var siblings = await _db.MenuItems.Where(m => m.Location == item.Location).OrderBy(m => m.SortOrder).ToListAsync();
+        var i = siblings.FindIndex(m => m.Id == id);
+        var j = i + Math.Sign(direction);
+        if (j >= 0 && j < siblings.Count)
+        {
+            (siblings[i], siblings[j]) = (siblings[j], siblings[i]);
+            for (var k = 0; k < siblings.Count; k++) siblings[k].SortOrder = k;
+            await _db.SaveChangesAsync();
+        }
+        return RedirectToAction(nameof(Index), new { location = item.Location });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var item = await _db.MenuItems.FindAsync(id);
+        if (item == null) return NotFound();
+        _db.MenuItems.Remove(item);
+        await _db.SaveChangesAsync();
+        Flash("Menu item removed.");
+        return RedirectToAction(nameof(Index), new { location = item.Location });
+    }
+
+    private static bool IsSafeUrl(string? url) =>
+        !string.IsNullOrWhiteSpace(url) &&
+        (url.StartsWith('/') && !url.StartsWith("//") ||
+         url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+         url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+         url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase));
+}

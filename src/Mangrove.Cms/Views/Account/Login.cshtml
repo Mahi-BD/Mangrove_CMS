@@ -1,0 +1,18 @@
+@model LoginForm
+@{ ViewData["Title"] = "Log in"; }
+<section class="form-page">
+    <h1>Log in</h1>
+    <form method="post" asp-action="Login" class="stack">
+        <div asp-validation-summary="ModelOnly" class="errors"></div>
+        <input type="hidden" asp-for="ReturnUrl" />
+        <label asp-for="Login"></label>
+        <input asp-for="Login" autocomplete="username" autofocus />
+        <span asp-validation-for="Login" class="field-error"></span>
+        <label asp-for="Password"></label>
+        <input asp-for="Password" autocomplete="current-password" />
+        <span asp-validation-for="Password" class="field-error"></span>
+        <label class="check"><input asp-for="RememberMe" /> Remember me</label>
+        <button type="submit">Log in</button>
+    </form>
+    <p class="muted"><a href="/account/register">Create an account</a></p>
+</section>

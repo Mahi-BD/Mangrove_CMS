@@ -1,0 +1,88 @@
+@inject SettingsService Settings
+@{
+    var site = await Settings.AllAsync();
+    var siteTitle = site[SettingKeys.SiteTitle];
+    var pageTitle = ViewData["Title"] as string;
+    var fullTitle = string.IsNullOrEmpty(pageTitle) ? $"{siteTitle} – {site[SettingKeys.Tagline]}" : $"{pageTitle} – {siteTitle}";
+    var description = ViewData["Description"] as string ?? site[SettingKeys.Tagline];
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@fullTitle</title>
+    <meta name="description" content="@description" />
+    <meta name="generator" content="Mangrove CMS" />
+    <meta property="og:site_name" content="@siteTitle" />
+    <meta property="og:title" content="@(pageTitle ?? siteTitle)" />
+    <meta property="og:description" content="@description" />
+    @if (ViewData["OgImage"] is string og)
+    {
+        <meta property="og:image" content="@og" />
+    }
+    @if (ViewData["Canonical"] is string canonical)
+    {
+        <link rel="canonical" href="@canonical" />
+    }
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title="@siteTitle" href="/feed" />
+    <link rel="stylesheet" href="/themes/mangrove/style.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site-header">
+        <div class="wrap header-inner">
+            <div class="branding">
+                <a class="site-title" href="/">@siteTitle</a>
+                @if (!string.IsNullOrEmpty(site[SettingKeys.Tagline]))
+                {
+                    <p class="site-tagline">@site[SettingKeys.Tagline]</p>
+                }
+            </div>
+            <nav class="site-nav" aria-label="Primary">
+                @await Component.InvokeAsync("Menu", new { location = "primary" })
+            </nav>
+        </div>
+    </header>
+
+    @if (User.AtLeast(UserRole.Author))
+    {
+        <div class="admin-strip">
+            <div class="wrap">
+                <a href="/admin">Dashboard</a>
+                <a href="/admin/posts/create">New post</a>
+                @if (ViewData["EditUrl"] is string edit)
+                {
+                    <a href="@edit">Edit this</a>
+                }
+                <form method="post" asp-antiforgery="true" action="/account/logout" class="inline">
+                    <button type="submit" class="linklike">Log out</button>
+                </form>
+            </div>
+        </div>
+    }
+
+    <div class="wrap layout">
+        <main id="content" class="content">
+            @RenderBody()
+        </main>
+        <aside class="sidebar">
+            <partial name="_Sidebar" />
+        </aside>
+    </div>
+
+    <footer class="site-footer">
+        <div class="wrap footer-inner">
+            @await Component.InvokeAsync("Menu", new { location = "footer" })
+            <p>@site[SettingKeys.FooterText] · <a href="/feed">RSS</a>
+                @if (User.Identity?.IsAuthenticated != true)
+                {
+                    <text> · <a href="/account/login">Log in</a></text>
+                }
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

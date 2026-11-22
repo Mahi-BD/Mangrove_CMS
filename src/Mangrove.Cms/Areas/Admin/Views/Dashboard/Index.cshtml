@@ -1,0 +1,61 @@
+@model DashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; }
+<div class="page-head">
+    <h1>Dashboard</h1>
+    <a class="btn primary" href="/admin/posts/create">New post</a>
+</div>
+
+<div class="stats">
+    <a class="stat" href="/admin/posts"><strong>@Model.Posts</strong><span>Published posts</span></a>
+    <a class="stat" href="/admin/posts?status=Draft"><strong>@Model.Drafts</strong><span>Drafts</span></a>
+    @if (User.AtLeast(UserRole.Editor))
+    {
+        <a class="stat" href="/admin/posts?type=Page"><strong>@Model.Pages</strong><span>Pages</span></a>
+        <a class="stat @(Model.PendingComments > 0 ? "attention" : null)" href="/admin/comments?status=Pending"><strong>@Model.PendingComments</strong><span>Pending comments</span></a>
+    }
+    <a class="stat" href="/admin/media"><strong>@Model.MediaFiles</strong><span>Media files</span></a>
+    @if (User.AtLeast(UserRole.Administrator))
+    {
+        <a class="stat" href="/admin/users"><strong>@Model.Users</strong><span>Users</span></a>
+    }
+</div>
+
+<div class="grid-2">
+    <section class="panel">
+        <h2>Recently edited</h2>
+        @if (Model.RecentPosts.Count == 0)
+        {
+            <p class="muted">Nothing yet. <a href="/admin/posts/create">Write your first post</a>.</p>
+        }
+        <ul class="plain">
+            @foreach (var p in Model.RecentPosts)
+            {
+                <li>
+                    <a href="/admin/posts/edit/@p.Id">@p.Title</a>
+                    <span class="status status-@p.Status.ToString().ToLowerInvariant()">@p.Status</span>
+                    <small class="muted">@p.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                </li>
+            }
+        </ul>
+    </section>
+    @if (User.AtLeast(UserRole.Editor))
+    {
+        <section class="panel">
+            <h2>Latest comments</h2>
+            @if (Model.RecentComments.Count == 0)
+            {
+                <p class="muted">No comments yet.</p>
+            }
+            <ul class="plain">
+                @foreach (var c in Model.RecentComments)
+                {
+                    <li>
+                        <strong>@c.AuthorName</strong> on <a href="/@c.Post?.Slug#comment-@c.Id" target="_blank">@c.Post?.Title</a>
+                        <span class="status status-@c.Status.ToString().ToLowerInvariant()">@c.Status</span>
+                        <div class="muted clip">@c.Content</div>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</div>

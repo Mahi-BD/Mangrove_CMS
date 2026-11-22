@@ -1,0 +1,182 @@
+@model SingleViewModel
+@inject ContentRenderer Renderer
+@{
+    var post = Model.Post;
+    var isHome = ViewData["IsHome"] is true;
+    ViewData["Title"] = isHome ? null : post.Title;
+    ViewData["Description"] = post.MetaDescription ?? post.Excerpt ?? Renderer.PlainText(post.Content, 160);
+    ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}/{(isHome ? "" : post.Slug)}";
+    ViewData["EditUrl"] = $"/admin/posts/edit/{post.Id}";
+    if (post.FeaturedMedia is { IsImage: true } fm) ViewData["OgImage"] = $"{Context.Request.Scheme}://{Context.Request.Host}{fm.Url}";
+
+    var author = post.Author;
+    var authorName = author == null ? "" : (string.IsNullOrWhiteSpace(author.DisplayName) ? author.UserName : author.DisplayName);
+    var categories = post.PostTerms.Where(pt => pt.Term?.Type == TermType.Category).Select(pt => pt.Term!).ToList();
+    var tags = post.PostTerms.Where(pt => pt.Term?.Type == TermType.Tag).Select(pt => pt.Term!).ToList();
+    var live = post.IsLive(DateTime.UtcNow);
+    var byParent = Model.Comments.ToLookup(c => c.ParentId);
+}
+
+<article class="entry entry-@post.Type.ToString().ToLowerInvariant()">
+    @if (!live)
+    {
+        <p class="notice">Preview: this @post.Type.ToString().ToLowerInvariant() is <strong>@post.Status.ToString().ToLowerInvariant()</strong> and not visible to visitors.</p>
+    }
+    <header class="entry-header">
+        <h1>@post.Title</h1>
+        @if (post.Type == PostType.Post)
+        {
+            <p class="meta">
+                <time datetime="@post.PublishedAt?.ToString("O")">@post.PublishedAt?.ToString("MMMM d, yyyy")</time>
+                @if (author != null)
+                {
+                    <text> · by <a href="/author/@author.UserName">@authorName</a></text>
+                }
+                @foreach (var c in categories)
+                {
+                    <text> · </text><a href="/category/@c.Slug">@c.Name</a>
+                }
+            </p>
+        }
+    </header>
+
+    @if (post.FeaturedMedia is { IsImage: true } img)
+    {
+        <figure class="featured">
+            <img src="@img.Url" alt="@img.AltText" />
+            @if (!string.IsNullOrWhiteSpace(img.Caption))
+            {
+                <figcaption>@img.Caption</figcaption>
+            }
+        </figure>
+    }
+
+    <div class="entry-content">
+        @Model.Body
+    </div>
+
+    @if (tags.Count > 0)
+    {
+        <p class="tags">
+            @foreach (var t in tags)
+            {
+                <a href="/tag/@t.Slug" rel="tag">#@t.Name</a>
+            }
+        </p>
+    }
+</article>
+
+@if (post.Type == PostType.Post && (Model.Previous != null || Model.Next != null))
+{
+    <nav class="post-nav" aria-label="More posts">
+        @if (Model.Previous != null)
+        {
+            <a href="/@Model.Previous.Slug" rel="prev"><small>Previous</small>@Model.Previous.Title</a>
+        }
+        else { <span></span> }
+        @if (Model.Next != null)
+        {
+            <a href="/@Model.Next.Slug" rel="next" class="next"><small>Next</small>@Model.Next.Title</a>
+        }
+    </nav>
+}
+
+@if (post.Type == PostType.Post)
+{
+    <section id="comments" class="comments">
+        @if (!string.IsNullOrEmpty(Model.Flash))
+        {
+            <p class="notice" role="status">@Model.Flash</p>
+        }
+
+        @if (Model.Comments.Count > 0)
+        {
+            <h2>@Model.Comments.Count @(Model.Comments.Count == 1 ? "comment" : "comments")</h2>
+            <ol class="comment-list">
+                @foreach (var c in byParent[null])
+                {
+                    RenderComment(c, 0);
+                }
+            </ol>
+        }
+
+        @if (Model.CommentsOpen)
+        {
+            <div id="respond" class="respond">
+                <h2>Leave a comment</h2>
+                <form method="post" asp-antiforgery="true" action="/comments" class="comment-form">
+                    <input type="hidden" asp-for="CommentForm.PostId" name="PostId" />
+                    <input type="hidden" name="ParentId" id="comment-parent" value="" />
+                    <p id="replying-to" hidden>Replying to <strong></strong> · <button type="button" class="linklike" data-cancel-reply>Cancel</button></p>
+                    <div class="hp" aria-hidden="true">
+                        <label>Leave this empty <input type="text" name="Website2" tabindex="-1" autocomplete="off" /></label>
+                    </div>
+                    <label>Comment <textarea name="Content" rows="5" required maxlength="5000"></textarea></label>
+                    <div class="row">
+                        <label>Name <input name="AuthorName" value="@Model.CommentForm.AuthorName" required maxlength="120" /></label>
+                        <label>Email <small>(not published)</small> <input type="email" name="AuthorEmail" value="@Model.CommentForm.AuthorEmail" maxlength="200" /></label>
+                    </div>
+                    <label>Website <input type="url" name="AuthorUrl" maxlength="300" placeholder="https://" /></label>
+                    <button type="submit">Post comment</button>
+                </form>
+            </div>
+            <script>
+                document.addEventListener('click', function (e) {
+                    var reply = e.target.closest('[data-reply]');
+                    var cancel = e.target.closest('[data-cancel-reply]');
+                    var box = document.getElementById('replying-to');
+                    if (reply) {
+                        document.getElementById('comment-parent').value = reply.dataset.reply;
+                        box.querySelector('strong').textContent = reply.dataset.name;
+                        box.hidden = false;
+                        document.querySelector('#respond textarea').focus();
+                    } else if (cancel) {
+                        document.getElementById('comment-parent').value = '';
+                        box.hidden = true;
+                    }
+                });
+            </script>
+        }
+        else if (Model.Comments.Count > 0)
+        {
+            <p class="muted">Comments are closed.</p>
+        }
+    </section>
+}
+
+@functions {
+    void RenderComment(Comment c, int depth)
+    {
+        var children = Model.Comments.Where(x => x.ParentId == c.Id).ToList();
+        var safeUrl = c.AuthorUrl != null && (c.AuthorUrl.StartsWith("https://") || c.AuthorUrl.StartsWith("http://")) ? c.AuthorUrl : null;
+        <li class="comment" id="comment-@c.Id">
+            <div class="comment-meta">
+                <strong>
+                    @if (safeUrl != null)
+                    {
+                        <a href="@safeUrl" rel="nofollow ugc noopener">@c.AuthorName</a>
+                    }
+                    else
+                    {
+                        @c.AuthorName
+                    }
+                </strong>
+                <time datetime="@c.CreatedAt.ToString("O")">@c.CreatedAt.ToString("MMMM d, yyyy 'at' HH:mm")</time>
+            </div>
+            <div class="comment-body">@Renderer.RenderComment(c.Content)</div>
+            @if (Model.CommentsOpen && depth < 3)
+            {
+                <button type="button" class="linklike reply" data-reply="@c.Id" data-name="@c.AuthorName">Reply</button>
+            }
+            @if (children.Count > 0)
+            {
+                <ol class="children">
+                    @foreach (var ch in children)
+                    {
+                        RenderComment(ch, depth + 1);
+                    }
+                </ol>
+            }
+        </li>
+    }
+}

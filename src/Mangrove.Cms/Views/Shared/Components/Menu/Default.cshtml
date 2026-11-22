@@ -1,0 +1,16 @@
+@model List<MenuItem>
+@{
+    var path = Context.Request.Path.Value ?? "/";
+}
+@if (Model.Count > 0)
+{
+    <ul class="menu menu-@ViewData["Location"]">
+        @foreach (var item in Model)
+        {
+            var current = item.Url == path || (item.Url != "/" && path.StartsWith(item.Url.TrimEnd('/') + "/"));
+            <li class="@(current ? "current" : null)">
+                <a href="@item.Url" target="@(item.OpenInNewTab ? "_blank" : null)" rel="@(item.OpenInNewTab ? "noopener" : null)" aria-current="@(current ? "page" : null)">@item.Label</a>
+            </li>
+        }
+    </ul>
+}

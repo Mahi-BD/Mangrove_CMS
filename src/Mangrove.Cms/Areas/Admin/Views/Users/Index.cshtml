@@ -1,0 +1,47 @@
+@model List<User>
+@{
+    ViewData["Title"] = "Users";
+    var role = ViewBag.Role as UserRole?;
+    var postCounts = (Dictionary<int, int>)ViewBag.PostCounts;
+}
+<div class="page-head">
+    <h1>Users</h1>
+    <a class="btn primary" href="/admin/users/create">Add new</a>
+</div>
+<nav class="filters toolbar">
+    <a class="@(role == null ? "active" : null)" href="/admin/users">All</a>
+    @foreach (var r in Enum.GetValues<UserRole>().Reverse())
+    {
+        <a class="@(role == r ? "active" : null)" href="/admin/users?role=@r">@r</a>
+    }
+</nav>
+<div class="table-wrap">
+<table class="table">
+    <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Posts</th><th>Last login</th></tr></thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
+            <tr class="@(u.IsActive ? null : "inactive")">
+                <td>
+                    <a class="row-title" href="/admin/users/edit/@u.Id">@u.UserName</a>
+                    @if (!u.IsActive) { <span class="status">Disabled</span> }
+                    <div class="row-actions">
+                        <a href="/admin/users/edit/@u.Id">Edit</a>
+                        @if (u.Id != User.UserId())
+                        {
+                            <form method="post" asp-antiforgery="true" action="/admin/users/delete/@u.Id" class="inline" data-confirm="Delete @u.UserName? Their posts will be assigned to you.">
+                                <button class="linklike danger">Delete</button>
+                            </form>
+                        }
+                    </div>
+                </td>
+                <td>@u.DisplayName</td>
+                <td>@u.Email</td>
+                <td>@u.Role</td>
+                <td>@(postCounts.TryGetValue(u.Id, out var n) ? n : 0)</td>
+                <td><small>@(u.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "never")</small></td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>

@@ -1,0 +1,52 @@
+@model PostListViewModel
+@{
+    ViewData["Title"] = Model.IsHome ? null : Model.Heading;
+    if (!string.IsNullOrWhiteSpace(Model.Description)) ViewData["Description"] = Model.Description;
+}
+
+@if (!Model.IsHome)
+{
+    <header class="archive-header">
+        <h1>@Model.Heading</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p>@Model.Description</p>
+        }
+    </header>
+}
+
+@if (Model.SearchQuery != null)
+{
+    <form action="/search" method="get" role="search" class="search-form big">
+        <label for="q" class="sr-only">Search</label>
+        <input id="q" type="search" name="q" value="@Model.SearchQuery" placeholder="Search posts…" autofocus />
+        <button type="submit">Search</button>
+    </form>
+}
+
+@if (Model.Result.Items.Count == 0)
+{
+    <p class="empty">@(Model.SearchQuery is { Length: > 0 } ? "Nothing matched your search. Try different words." : "Nothing here yet.")</p>
+}
+else
+{
+    foreach (var post in Model.Result.Items)
+    {
+        <partial name="_PostCard" model="post" />
+    }
+}
+
+@if (Model.Result.TotalPages > 1)
+{
+    <nav class="pager" aria-label="Pages">
+        @if (Model.Result.HasNext)
+        {
+            <a href="@string.Format(Model.PageUrlFormat, Model.Result.Page + 1)">← Older posts</a>
+        }
+        <span>Page @Model.Result.Page of @Model.Result.TotalPages</span>
+        @if (Model.Result.HasPrevious)
+        {
+            <a href="@string.Format(Model.PageUrlFormat, Model.Result.Page - 1)">Newer posts →</a>
+        }
+    </nav>
+}

@@ -1,0 +1,34 @@
+@model Post
+@inject ContentRenderer Renderer
+@{
+    var author = Model.Author;
+    var authorName = author == null ? "" : (string.IsNullOrWhiteSpace(author.DisplayName) ? author.UserName : author.DisplayName);
+    var excerpt = string.IsNullOrWhiteSpace(Model.Excerpt) ? Renderer.PlainText(Model.Content, 280) : Model.Excerpt;
+    var categories = Model.PostTerms.Where(pt => pt.Term?.Type == TermType.Category).Select(pt => pt.Term!).ToList();
+}
+<article class="card @(Model.IsSticky ? "sticky" : null)">
+    @if (Model.FeaturedMedia is { IsImage: true } img)
+    {
+        <a href="/@Model.Slug" class="card-image"><img src="@img.Url" alt="@img.AltText" loading="lazy" /></a>
+    }
+    <div class="card-body">
+        @if (Model.IsSticky)
+        {
+            <span class="badge">Featured</span>
+        }
+        <h2 class="card-title"><a href="/@Model.Slug">@Model.Title</a></h2>
+        <p class="meta">
+            <time datetime="@Model.PublishedAt?.ToString("O")">@Model.PublishedAt?.ToString("MMMM d, yyyy")</time>
+            @if (author != null)
+            {
+                <text> · by <a href="/author/@author.UserName">@authorName</a></text>
+            }
+            @foreach (var c in categories)
+            {
+                <text> · </text><a href="/category/@c.Slug">@c.Name</a>
+            }
+        </p>
+        <p class="excerpt">@excerpt</p>
+        <a class="more" href="/@Model.Slug">Continue reading<span class="sr-only"> “@Model.Title”</span> →</a>
+    </div>
+</article>

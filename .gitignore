@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+publish/
+published/
+out/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Runtime data (database, data-protection keys, uploads)
+App_Data/
+**/wwwroot/uploads/*
+!**/wwwroot/uploads/.gitkeep
+*.db
+*.db-shm
+*.db-wal
+
+# Local scratch
+Repo/Temp/
+.playwright-mcp/
+*.log
+.env
