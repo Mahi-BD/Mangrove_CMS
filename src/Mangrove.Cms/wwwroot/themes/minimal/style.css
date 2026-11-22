@@ -38,7 +38,8 @@ body.theme-minimal { font-family: var(--ui); font-size: 1.0625rem; line-height: 
 .theme-minimal .entry-figure { margin: 0 0 2.5rem; }
 .theme-minimal .entry-content { font-family: var(--ui); font-size: 1.08rem; }
 .theme-minimal .entry-content h2, .theme-minimal .entry-content h3 { font-family: var(--ui); letter-spacing: -.02em; }
-.theme-minimal .entry-content blockquote { font-style: normal; font-size: 1.15rem; border-left-color: var(--ink); }
+.theme-minimal .entry-content blockquote { font-style: normal; font-size: 1.15rem; }
+.theme-minimal .entry-content blockquote::before { font-family: var(--ui); font-weight: 700; color: var(--brackish); }
 .theme-minimal .post-nav a, .theme-minimal .comments h2, .theme-minimal .comments h3 { font-family: var(--ui); }
 .theme-minimal .comment-body, .theme-minimal textarea { font-family: var(--ui); }
 .theme-minimal .respond { border: 0; padding: 0; background: none; }
