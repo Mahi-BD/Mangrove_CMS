@@ -29,17 +29,17 @@
                     <div style="display:flex;gap:.7rem;align-items:center">
                         <span class="avatar" aria-hidden="true">@Fmt.Name(u)[..1]</span>
                         <div>
-                            <a class="row-title" href="/admin/users/edit/@u.Id">@Fmt.Name(u)</a>
+                            <a class="row-title" href="/admin/users/edit/@u.Uid">@Fmt.Name(u)</a>
                             @if (u.Id == User.UserId()) { <span class="flag">You</span> }
                             @if (!u.IsActive) { <span class="flag">Disabled</span> }
                             <div class="small muted">@u.UserName</div>
                         </div>
                     </div>
                     <div class="row-actions">
-                        <a href="/admin/users/edit/@u.Id">Edit</a>
+                        <a href="/admin/users/edit/@u.Uid">Edit</a>
                         @if (u.Id != User.UserId())
                         {
-                            <form method="post" asp-antiforgery="true" action="/admin/users/delete/@u.Id" class="inline" data-confirm="Delete @u.UserName? Their posts will be moved to you.">
+                            <form method="post" asp-antiforgery="true" action="/admin/users/delete/@u.Uid" class="inline" data-confirm="Delete @u.UserName? Their posts will be moved to you.">
                                 <button class="linklike danger">Delete</button>
                             </form>
                         }

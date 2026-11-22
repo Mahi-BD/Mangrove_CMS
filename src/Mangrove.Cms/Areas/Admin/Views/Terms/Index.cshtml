@@ -17,7 +17,7 @@
     <section class="panel">
         <h2>@(editing == null ? $"Add a {noun}" : $"Edit “{editing.Name}”")</h2>
         <form method="post" asp-antiforgery="true" action="/admin/terms/save">
-            <input type="hidden" name="id" value="@(editing?.Id ?? 0)" />
+            <input type="hidden" name="id" value="@(editing?.Uid ?? Guid.Empty)" />
             <input type="hidden" name="type" value="@type" />
             <label for="t-name">Name</label>
             <input id="t-name" name="name" value="@editing?.Name" required maxlength="120" />
@@ -52,12 +52,12 @@
             {
                 <tr>
                     <td>
-                        <a class="row-title" href="/admin/terms?type=@type&edit=@t.Id">@t.Name</a>
+                        <a class="row-title" href="/admin/terms?type=@type&edit=@t.Uid">@t.Name</a>
                         @if (!string.IsNullOrEmpty(t.Description)) { <div class="small muted">@t.Description</div> }
                         <div class="row-actions">
-                            <a href="/admin/terms?type=@type&edit=@t.Id">Edit</a>
+                            <a href="/admin/terms?type=@type&edit=@t.Uid">Edit</a>
                             <a href="/@(isCat ? "category" : "tag")/@t.Slug" target="_blank">View</a>
-                            <form method="post" asp-antiforgery="true" action="/admin/terms/delete/@t.Id" class="inline" data-confirm="Delete “@t.Name”? Posts stay; they just lose this @noun.">
+                            <form method="post" asp-antiforgery="true" action="/admin/terms/delete/@t.Uid" class="inline" data-confirm="Delete “@t.Name”? Posts stay; they just lose this @noun.">
                                 <button class="linklike danger">Delete</button>
                             </form>
                         </div>

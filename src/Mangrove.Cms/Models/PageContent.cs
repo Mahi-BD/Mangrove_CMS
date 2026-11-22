@@ -52,6 +52,9 @@ public class TableRow
 public class Notice
 {
     public int Id { get; set; }
+
+    /// <summary>Public identifier used in URLs and forms, so records can't be guessed by counting.</summary>
+    public Guid Uid { get; set; } = Guid.NewGuid();
     public int PostId { get; set; }
 
     [Required, MaxLength(300)]

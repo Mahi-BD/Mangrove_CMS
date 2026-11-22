@@ -35,7 +35,7 @@
                 <p class="small muted">@Fmt.Size(m.SizeBytes), uploaded @Fmt.Ago(m.UploadedAt)</p>
                 <label for="url-@m.Id">File address</label>
                 <input id="url-@m.Id" readonly value="@m.Url" onclick="this.select()" />
-                <form method="post" asp-antiforgery="true" action="/admin/media/update/@m.Id">
+                <form method="post" asp-antiforgery="true" action="/admin/media/update/@m.Uid">
                     <label for="alt-@m.Id">Alt text</label>
                     <input id="alt-@m.Id" name="altText" value="@m.AltText" />
                     <span class="hint">Describes the image for people using screen readers.</span>
@@ -45,7 +45,7 @@
                         <button class="btn">Save details</button>
                         <a class="btn quiet" href="@m.Url" target="_blank">Open file</a>
                         <span class="spacer"></span>
-                        <button class="btn quiet danger" formaction="/admin/media/delete/@m.Id" data-confirm-click="Delete @m.FileName? Posts that use it will show a broken image.">Delete</button>
+                        <button class="btn quiet danger" formaction="/admin/media/delete/@m.Uid" data-confirm-click="Delete @m.FileName? Posts that use it will show a broken image.">Delete</button>
                     </div>
                 </form>
             </div>

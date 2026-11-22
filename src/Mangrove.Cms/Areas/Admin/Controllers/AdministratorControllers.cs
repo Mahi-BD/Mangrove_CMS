@@ -34,19 +34,26 @@ public class UsersController : AdminController
     public IActionResult Create() => View("Edit", new UserEditForm());
 
     [HttpGet]
-    public async Task<IActionResult> Edit(int id)
+    public async Task<IActionResult> Edit(Guid id)
     {
-        var u = await _db.Users.FindAsync(id);
+        var u = await _db.Users.FirstOrDefaultAsync(x => x.Uid == id);
         if (u == null) return NotFound();
         return View(new UserEditForm
         {
-            Id = u.Id, UserName = u.UserName, Email = u.Email, DisplayName = u.DisplayName, Role = u.Role, IsActive = u.IsActive,
+            Id = u.Id, Uid = u.Uid, UserName = u.UserName, Email = u.Email, DisplayName = u.DisplayName, Role = u.Role, IsActive = u.IsActive,
         });
     }
 
     [HttpPost]
     public async Task<IActionResult> Save(UserEditForm form)
     {
+        User? existing = null;
+        if (form.Uid != Guid.Empty)
+        {
+            existing = await _db.Users.FirstOrDefaultAsync(u => u.Uid == form.Uid);
+            if (existing == null) return NotFound();
+            form.Id = existing.Id;
+        }
         if (form.Id == 0 && string.IsNullOrEmpty(form.Password))
             ModelState.AddModelError(nameof(form.Password), "New users need a password.");
         if (await _db.Users.AnyAsync(u => u.UserName == form.UserName && u.Id != form.Id))
@@ -54,8 +61,7 @@ public class UsersController : AdminController
         if (await _db.Users.AnyAsync(u => u.Email == form.Email && u.Id != form.Id))
             ModelState.AddModelError(nameof(form.Email), "Another account uses that email.");
 
-        User? user = form.Id == 0 ? new User() : await _db.Users.FindAsync(form.Id);
-        if (user == null) return NotFound();
+        var user = existing ?? new User();
 
         var losingAdmin = user.Role == UserRole.Administrator && (form.Role != UserRole.Administrator || !form.IsActive);
         if (form.Id != 0 && losingAdmin &&
@@ -80,15 +86,16 @@ public class UsersController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        if (id == CurrentUserId)
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Uid == id);
+        if (user == null) return NotFound();
+        var userId = user.Id;
+        if (userId == CurrentUserId)
         {
             Flash("You can't delete yourself.", "error");
             return RedirectToAction(nameof(Index));
         }
-        var user = await _db.Users.FindAsync(id);
-        if (user == null) return NotFound();
         if (user.Role == UserRole.Administrator && await _db.Users.CountAsync(u => u.Role == UserRole.Administrator) <= 1)
         {
             Flash("This is the last administrator.", "error");
@@ -96,8 +103,8 @@ public class UsersController : AdminController
         }
 
         // Keep their content: hand it over to the admin doing the delete.
-        await _db.Posts.Where(p => p.AuthorId == id).ExecuteUpdateAsync(s => s.SetProperty(p => p.AuthorId, CurrentUserId));
-        await _db.Comments.Where(c => c.UserId == id).ExecuteUpdateAsync(s => s.SetProperty(c => c.UserId, (int?)null));
+        await _db.Posts.Where(p => p.AuthorId == userId).ExecuteUpdateAsync(s => s.SetProperty(p => p.AuthorId, CurrentUserId));
+        await _db.Comments.Where(c => c.UserId == userId).ExecuteUpdateAsync(s => s.SetProperty(c => c.UserId, (int?)null));
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
         Flash($"Deleted {user.UserName}. Their posts now belong to you.");

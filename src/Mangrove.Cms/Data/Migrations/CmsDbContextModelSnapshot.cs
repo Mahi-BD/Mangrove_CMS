@@ -57,10 +57,16 @@ namespace Mangrove.Cms.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("UserId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
 
                     b.HasIndex("PostId", "Status");
 
@@ -99,6 +105,9 @@ namespace Mangrove.Cms.Data.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("TEXT");
 
@@ -106,6 +115,9 @@ namespace Mangrove.Cms.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
 
                     b.ToTable("Media");
                 });
@@ -188,10 +200,16 @@ namespace Mangrove.Cms.Data.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
 
                     b.HasIndex("PostId", "IsPinned", "NoticeDate");
 
@@ -289,6 +307,9 @@ namespace Mangrove.Cms.Data.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -297,6 +318,9 @@ namespace Mangrove.Cms.Data.Migrations
                     b.HasIndex("AuthorId");
 
                     b.HasIndex("FeaturedMediaId");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
 
                     b.HasIndex("Type", "Slug")
                         .IsUnique();
@@ -414,7 +438,13 @@ namespace Mangrove.Cms.Data.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
 
                     b.HasIndex("Type", "Slug")
                         .IsUnique();
@@ -463,6 +493,9 @@ namespace Mangrove.Cms.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("UserName")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -472,6 +505,9 @@ namespace Mangrove.Cms.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Uid")
                         .IsUnique();
 
                     b.HasIndex("UserName")

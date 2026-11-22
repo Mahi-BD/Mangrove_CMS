@@ -1,9 +1,9 @@
 @model UserEditForm
-@{ ViewData["Title"] = Model.Id == 0 ? "Add user" : "Edit user"; }
-<div class="page-head"><h1>@(Model.Id == 0 ? "Add user" : Model.UserName)</h1></div>
+@{ ViewData["Title"] = Model.Uid == Guid.Empty ? "Add user" : "Edit user"; }
+<div class="page-head"><h1>@(Model.Uid == Guid.Empty ? "Add user" : Model.UserName)</h1></div>
 <form method="post" asp-antiforgery="true" action="/admin/users/save" class="narrow-form">
     <div asp-validation-summary="ModelOnly" class="errors"></div>
-    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="Uid" />
     <div class="form-columns">
     <section class="panel">
         <h2>Account</h2>
@@ -23,15 +23,15 @@
         <select asp-for="Role" asp-items="Html.GetEnumSelectList<UserRole>().Reverse()"></select>
         <span asp-validation-for="Role" class="field-error"></span>
         <span class="hint">Subscribers can comment and edit their profile. Authors write and publish their own posts. Editors manage all content. Administrators also manage users, settings and themes.</span>
-        <label asp-for="Password">@(Model.Id == 0 ? "Password" : "New password")</label>
+        <label asp-for="Password">@(Model.Uid == Guid.Empty ? "Password" : "New password")</label>
         <input asp-for="Password" autocomplete="new-password" />
         <span asp-validation-for="Password" class="field-error"></span>
-        <span class="hint">@(Model.Id == 0 ? "At least 8 characters." : "Leave empty to keep the current password.")</span>
+        <span class="hint">@(Model.Uid == Guid.Empty ? "At least 8 characters." : "Leave empty to keep the current password.")</span>
         <label class="check" style="margin-top:1rem"><input asp-for="IsActive" /> Can sign in</label>
     </section>
     </div>
     <div class="actions">
-        <button class="btn primary">@(Model.Id == 0 ? "Add user" : "Save changes")</button>
+        <button class="btn primary">@(Model.Uid == Guid.Empty ? "Add user" : "Save changes")</button>
         <a class="btn quiet" href="/admin/users">Cancel</a>
     </div>
 </form>

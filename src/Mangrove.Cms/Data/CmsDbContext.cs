@@ -75,6 +75,14 @@ public class CmsDbContext : DbContext
             e.HasIndex(x => new { x.PostId, x.IsPinned, x.NoticeDate });
             e.HasOne<Post>().WithMany().HasForeignKey(x => x.PostId).OnDelete(DeleteBehavior.Cascade);
         });
+        // Every record that appears in a URL has a unique random Uid.
+        b.Entity<User>().HasIndex(x => x.Uid).IsUnique();
+        b.Entity<Post>().HasIndex(x => x.Uid).IsUnique();
+        b.Entity<Term>().HasIndex(x => x.Uid).IsUnique();
+        b.Entity<Comment>().HasIndex(x => x.Uid).IsUnique();
+        b.Entity<Media>().HasIndex(x => x.Uid).IsUnique();
+        b.Entity<Notice>().HasIndex(x => x.Uid).IsUnique();
+
         b.Entity<NoticeAttachment>(e =>
         {
             e.HasOne(x => x.Notice).WithMany(n => n.Attachments).HasForeignKey(x => x.NoticeId).OnDelete(DeleteBehavior.Cascade);

@@ -20,19 +20,19 @@ public class TermsController : AdminController
         _slugs = slugs;
     }
 
-    public async Task<IActionResult> Index(TermType type = TermType.Category, int? edit = null)
+    public async Task<IActionResult> Index(TermType type = TermType.Category, Guid? edit = null)
     {
         var terms = await _db.Terms.AsNoTracking().Where(t => t.Type == type).OrderBy(t => t.Name)
             .Select(t => new { Term = t, Count = t.PostTerms.Count })
             .ToListAsync();
         ViewBag.Type = type;
         ViewBag.Counts = terms.ToDictionary(x => x.Term.Id, x => x.Count);
-        ViewBag.Editing = edit.HasValue ? terms.FirstOrDefault(x => x.Term.Id == edit)?.Term : null;
+        ViewBag.Editing = edit.HasValue ? terms.FirstOrDefault(x => x.Term.Uid == edit)?.Term : null;
         return View(terms.Select(x => x.Term).ToList());
     }
 
     [HttpPost]
-    public async Task<IActionResult> Save(int id, TermType type, string name, string? slug, string? description, int? parentId)
+    public async Task<IActionResult> Save(Guid id, TermType type, string name, string? slug, string? description, int? parentId)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -40,24 +40,25 @@ public class TermsController : AdminController
             return RedirectToAction(nameof(Index), new { type });
         }
 
-        var term = id == 0 ? new Term { Type = type } : await _db.Terms.FindAsync(id);
+        var isNew = id == Guid.Empty;
+        var term = isNew ? new Term { Type = type } : await _db.Terms.FirstOrDefaultAsync(t => t.Uid == id);
         if (term == null) return NotFound();
-        if (id == 0) _db.Terms.Add(term);
+        if (isNew) _db.Terms.Add(term);
 
         term.Name = name.Trim();
-        term.Slug = await _slugs.UniqueTermSlugAsync(slug, name, term.Type, id == 0 ? null : id);
+        term.Slug = await _slugs.UniqueTermSlugAsync(slug, name, term.Type, isNew ? null : term.Id);
         term.Description = description?.Trim();
-        term.ParentId = term.Type == TermType.Category && parentId is > 0 && parentId != id ? parentId : null;
+        term.ParentId = term.Type == TermType.Category && parentId is > 0 && parentId != term.Id ? parentId : null;
         await _db.SaveChangesAsync();
 
-        Flash(id == 0 ? $"Added “{term.Name}”." : "Saved.");
+        Flash(isNew ? $"Added “{term.Name}”." : "Saved.");
         return RedirectToAction(nameof(Index), new { type = term.Type });
     }
 
     [HttpPost]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var term = await _db.Terms.FindAsync(id);
+        var term = await _db.Terms.FirstOrDefaultAsync(t => t.Uid == id);
         if (term == null) return NotFound();
         if (term.Type == TermType.Category && await _db.Terms.CountAsync(t => t.Type == TermType.Category) == 1)
         {
@@ -94,9 +95,9 @@ public class CommentsController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> SetStatus(int id, CommentStatus status, CommentStatus? from, string? returnTo)
+    public async Task<IActionResult> SetStatus(Guid id, CommentStatus status, CommentStatus? from, string? returnTo)
     {
-        var c = await _db.Comments.FindAsync(id);
+        var c = await _db.Comments.FirstOrDefaultAsync(x => x.Uid == id);
         if (c == null) return NotFound();
         c.Status = status;
         await _db.SaveChangesAsync();
@@ -112,9 +113,9 @@ public class CommentsController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Delete(int id, CommentStatus? from)
+    public async Task<IActionResult> Delete(Guid id, CommentStatus? from)
     {
-        var c = await _db.Comments.FindAsync(id);
+        var c = await _db.Comments.FirstOrDefaultAsync(x => x.Uid == id);
         if (c == null) return NotFound();
         _db.Comments.Remove(c);
         await _db.SaveChangesAsync();

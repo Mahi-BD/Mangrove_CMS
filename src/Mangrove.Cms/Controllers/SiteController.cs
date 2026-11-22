@@ -147,7 +147,7 @@ public class SiteController : Controller
             Post = full,
             Body = _renderer.Render(full.Content),
             CommentsOpen = commentsEnabled && full.AllowComments && full.Type == PostType.Post && full.IsLive(DateTime.UtcNow),
-            CommentForm = new CommentForm { PostId = full.Id },
+            CommentForm = new CommentForm { PostUid = full.Uid },
             Flash = TempData["Flash"] as string,
         };
 
@@ -221,8 +221,8 @@ public class SiteController : Controller
     }
 
     /// <summary>A single notice with its full description and files.</summary>
-    [HttpGet("/{slug}/notice/{id:int}")]
-    public async Task<IActionResult> NoticeDetail(string slug, int id)
+    [HttpGet("/{slug}/notice/{id:guid}")]
+    public async Task<IActionResult> NoticeDetail(string slug, Guid id)
     {
         var canPreview = User.AtLeast(UserRole.Editor);
         var boards = canPreview ? _db.Posts.AsNoTracking().Where(p => p.Status != PostStatus.Trash) : _posts.Live(PostType.Page);
@@ -230,7 +230,7 @@ public class SiteController : Controller
         if (board == null) return NotFoundPage();
 
         var notice = await _db.Notices.AsNoTracking().Include(n => n.Attachments).ThenInclude(a => a.Media)
-            .FirstOrDefaultAsync(n => n.Id == id && n.PostId == board.Id && (n.IsPublished || canPreview));
+            .FirstOrDefaultAsync(n => n.Uid == id && n.PostId == board.Id && (n.IsPublished || canPreview));
         if (notice == null) return NotFoundPage();
 
         return View("NoticeDetail", new NoticeDetailViewModel { Board = board, Notice = notice, Body = _renderer.Render(notice.Description) });
@@ -239,7 +239,7 @@ public class SiteController : Controller
     [HttpPost("/comments"), EnableRateLimiting("forms")]
     public async Task<IActionResult> PostComment(CommentForm form)
     {
-        var post = await _posts.Live(PostType.Post).FirstOrDefaultAsync(p => p.Id == form.PostId);
+        var post = await _posts.Live(PostType.Post).FirstOrDefaultAsync(p => p.Uid == form.PostUid);
         if (post == null) return NotFoundPage();
 
         if (!string.IsNullOrEmpty(form.Website2)) return Redirect("/" + post.Slug); // bot
@@ -254,13 +254,13 @@ public class SiteController : Controller
 
         var moderated = await _settings.GetBoolAsync(SettingKeys.CommentModeration);
         var trusted = User.AtLeast(UserRole.Author);
-        var parentOk = form.ParentId == null ||
-                       await _db.Comments.AnyAsync(c => c.Id == form.ParentId && c.PostId == post.Id);
+        int? parentId = form.ParentUid == null ? null
+            : await _db.Comments.Where(c => c.Uid == form.ParentUid && c.PostId == post.Id).Select(c => (int?)c.Id).FirstOrDefaultAsync();
 
         _db.Comments.Add(new Comment
         {
             PostId = post.Id,
-            ParentId = parentOk ? form.ParentId : null,
+            ParentId = parentId,
             UserId = User.UserId(),
             AuthorName = form.AuthorName.Trim(),
             AuthorEmail = form.AuthorEmail?.Trim(),

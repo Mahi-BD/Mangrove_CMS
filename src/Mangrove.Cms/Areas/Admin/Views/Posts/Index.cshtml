@@ -64,7 +64,7 @@
             var tags = p.PostTerms.Where(t => t.Term?.Type == TermType.Tag).Select(t => t.Term!.Name).ToList();
             <tr>
                 <td>
-                    <a class="row-title" href="/admin/posts/edit/@p.Id">@p.Title</a>
+                    <a class="row-title" href="/admin/posts/edit/@p.Uid">@p.Title</a>
                     @if (p.IsSticky) { <span class="flag">Pinned</span> }
                     @if (isPage && p.Kind == PageKind.Table) { <span class="kind-tag">Table</span> }
                     @if (isPage && p.Kind == PageKind.Notices) { <span class="kind-tag">Notice board</span> }
@@ -72,14 +72,14 @@
                     <div class="row-actions">
                         @if (p.Status == PostStatus.Trash)
                         {
-                            <form method="post" asp-antiforgery="true" action="/admin/posts/restore/@p.Id" class="inline"><button class="linklike">Restore</button></form>
-                            <form method="post" asp-antiforgery="true" action="/admin/posts/delete/@p.Id" class="inline" data-confirm="Delete “@p.Title” for good? This can't be undone."><button class="linklike danger">Delete for good</button></form>
+                            <form method="post" asp-antiforgery="true" action="/admin/posts/restore/@p.Uid" class="inline"><button class="linklike">Restore</button></form>
+                            <form method="post" asp-antiforgery="true" action="/admin/posts/delete/@p.Uid" class="inline" data-confirm="Delete “@p.Title” for good? This can't be undone."><button class="linklike danger">Delete for good</button></form>
                         }
                         else
                         {
-                            <a href="/admin/posts/edit/@p.Id">Edit</a>
+                            <a href="/admin/posts/edit/@p.Uid">Edit</a>
                             <a href="/@p.Slug" target="_blank">@(p.Status == PostStatus.Published ? "View" : "Preview")</a>
-                            <form method="post" asp-antiforgery="true" action="/admin/posts/trash/@p.Id" class="inline"><button class="linklike danger">Move to trash</button></form>
+                            <form method="post" asp-antiforgery="true" action="/admin/posts/trash/@p.Uid" class="inline"><button class="linklike danger">Move to trash</button></form>
                         }
                     </div>
                 </td>

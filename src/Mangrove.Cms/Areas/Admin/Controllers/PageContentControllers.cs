@@ -28,15 +28,4 @@ public class PageTableController : AdminController
             rows = sheet.Rows.Select(r => sheet.Headers.Select((_, i) => i < r.Count ? r[i] : "").ToList()),
         });
     }
-
-    // Old links from the first version of this feature.
-    [HttpGet]
-    public IActionResult Edit(int id) => RedirectToAction("Edit", "Posts", new { id });
-}
-
-[Authorize(Policy = Policies.Editor)]
-public class NoticesController : AdminController
-{
-    [HttpGet]
-    public IActionResult Index(int id) => RedirectToAction("Edit", "Posts", new { id });
 }

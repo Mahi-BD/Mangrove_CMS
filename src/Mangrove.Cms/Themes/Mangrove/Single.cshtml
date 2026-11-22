@@ -7,7 +7,7 @@
     ViewData["Title"] = isHome ? null : post.Title;
     ViewData["Description"] = post.MetaDescription ?? post.Excerpt ?? Renderer.PlainText(post.Content, 160);
     ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}/{(isHome ? "" : post.Slug)}";
-    ViewData["EditUrl"] = $"/admin/posts/edit/{post.Id}";
+    ViewData["EditUrl"] = $"/admin/posts/edit/{post.Uid}";
     ViewData["EditNoun"] = isPost ? "post" : "page";
     if (post.FeaturedMedia is { IsImage: true } fm) ViewData["OgImage"] = $"{Context.Request.Scheme}://{Context.Request.Host}{fm.Url}";
     var tags = post.PostTerms.Where(pt => pt.Term?.Type == TermType.Tag).Select(pt => pt.Term!).ToList();
@@ -88,8 +88,8 @@
             <div id="respond" class="respond">
                 <h3>@(Model.Comments.Count == 0 ? "Start the conversation" : "Add a comment")</h3>
                 <form method="post" asp-antiforgery="true" action="/comments" class="comment-form">
-                    <input type="hidden" asp-for="CommentForm.PostId" name="PostId" />
-                    <input type="hidden" name="ParentId" id="comment-parent" value="" />
+                    <input type="hidden" asp-for="CommentForm.PostUid" name="PostUid" />
+                    <input type="hidden" name="ParentUid" id="comment-parent" value="" />
                     <p id="replying-to" class="replying" hidden>Replying to <strong></strong>. <button type="button" class="linklike" data-cancel-reply>Cancel reply</button></p>
                     <div class="hp" aria-hidden="true"><label>Leave this empty <input type="text" name="Website2" tabindex="-1" autocomplete="off" /></label></div>
                     <label for="c-body">Comment</label>
@@ -131,7 +131,7 @@
     {
         var children = Model.Comments.Where(x => x.ParentId == c.Id).ToList();
         var safeUrl = c.AuthorUrl != null && (c.AuthorUrl.StartsWith("https://") || c.AuthorUrl.StartsWith("http://")) ? c.AuthorUrl : null;
-        <li class="comment" id="comment-@c.Id">
+        <li class="comment" id="comment-@c.Uid">
             <div class="comment-meta">
                 <strong>
                     @if (safeUrl != null)
@@ -148,7 +148,7 @@
             <div class="comment-body">@Renderer.RenderComment(c.Content)</div>
             @if (Model.CommentsOpen && depth < 3)
             {
-                <button type="button" class="linklike reply" data-reply="@c.Id" data-name="@c.AuthorName">Reply</button>
+                <button type="button" class="linklike reply" data-reply="@c.Uid" data-name="@c.AuthorName">Reply</button>
             }
             @if (children.Count > 0)
             {

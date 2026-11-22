@@ -54,7 +54,7 @@
             <ul class="list">
                 @foreach (var p in Model.RecentDrafts)
                 {
-                    <li><span class="grow"><a class="title" href="/admin/posts/edit/@p.Id">@p.Title</a></span><span class="when">Edited @Fmt.Ago(p.UpdatedAt)</span></li>
+                    <li><span class="grow"><a class="title" href="/admin/posts/edit/@p.Uid">@p.Title</a></span><span class="when">Edited @Fmt.Ago(p.UpdatedAt)</span></li>
                 }
             </ul>
         </section>
@@ -76,11 +76,11 @@
                             <div class="grow">
                                 <strong>@c.AuthorName</strong> <span class="muted">on</span> <a href="/@c.Post?.Slug" target="_blank">@c.Post?.Title</a>
                                 <p class="quote">@c.Content</p>
-                                <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Id" class="inline">
+                                <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Uid" class="inline">
                                     <input type="hidden" name="status" value="Approved" /><input type="hidden" name="returnTo" value="/admin" />
                                     <button class="btn sm">Approve</button>
                                 </form>
-                                <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Id" class="inline">
+                                <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Uid" class="inline">
                                     <input type="hidden" name="status" value="Spam" /><input type="hidden" name="returnTo" value="/admin" />
                                     <button class="btn sm quiet danger">Spam</button>
                                 </form>
@@ -102,7 +102,7 @@
                 @foreach (var p in Model.RecentPublished)
                 {
                     <li>
-                        <span class="grow"><a class="title" href="/admin/posts/edit/@p.Id">@p.Title</a>
+                        <span class="grow"><a class="title" href="/admin/posts/edit/@p.Uid">@p.Title</a>
                             @if (p.Status == PostStatus.Scheduled) { <span class="status status-scheduled">Scheduled</span> }
                         </span>
                         <span class="when">@(p.PublishedAt.HasValue ? Fmt.Ago(p.PublishedAt.Value) : "")</span>

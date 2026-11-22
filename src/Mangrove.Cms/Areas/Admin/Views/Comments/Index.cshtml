@@ -46,7 +46,7 @@
                         @foreach (var target in new[] { CommentStatus.Approved, CommentStatus.Pending, CommentStatus.Spam, CommentStatus.Trash }.Where(s => s != c.Status))
                         {
                             var verb = target switch { CommentStatus.Approved => "Approve", CommentStatus.Pending => "Unapprove", CommentStatus.Spam => "Spam", _ => "Trash" };
-                            <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Id" class="inline">
+                            <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Uid" class="inline">
                                 <input type="hidden" name="status" value="@target" />
                                 <input type="hidden" name="from" value="@status" />
                                 <button class="linklike @(target is CommentStatus.Spam or CommentStatus.Trash ? "danger" : null)">@verb</button>
@@ -54,14 +54,14 @@
                         }
                         @if (c.Status is CommentStatus.Spam or CommentStatus.Trash)
                         {
-                            <form method="post" asp-antiforgery="true" action="/admin/comments/delete/@c.Id" class="inline" data-confirm="Delete this comment for good?">
+                            <form method="post" asp-antiforgery="true" action="/admin/comments/delete/@c.Uid" class="inline" data-confirm="Delete this comment for good?">
                                 <input type="hidden" name="from" value="@status" />
                                 <button class="linklike danger">Delete for good</button>
                             </form>
                         }
                     </div>
                 </td>
-                <td><a href="/@c.Post?.Slug#comment-@c.Id" target="_blank">@c.Post?.Title</a></td>
+                <td><a href="/@c.Post?.Slug#comment-@c.Uid" target="_blank">@c.Post?.Title</a></td>
                 <td class="when">@Fmt.Ago(c.CreatedAt)</td>
             </tr>
         }

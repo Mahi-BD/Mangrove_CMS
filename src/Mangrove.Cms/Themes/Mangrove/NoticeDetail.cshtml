@@ -2,7 +2,7 @@
 @{
     var n = Model.Notice;
     ViewData["Title"] = n.Title;
-    ViewData["EditUrl"] = $"/admin/notices/edit/{n.Id}";
+    ViewData["EditUrl"] = $"/admin/posts/edit/{Model.Board.Uid}";
     ViewData["EditNoun"] = "notice";
     var files = n.Attachments.OrderBy(a => a.SortOrder).Where(a => a.Media != null).ToList();
 }

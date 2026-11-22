@@ -61,8 +61,8 @@ public class SingleViewModel
 
 public class CommentForm
 {
-    public int PostId { get; set; }
-    public int? ParentId { get; set; }
+    public Guid PostUid { get; set; }
+    public Guid? ParentUid { get; set; }
 
     [Required, MaxLength(120), Display(Name = "Name")]
     public string AuthorName { get; set; } = "";
@@ -157,7 +157,9 @@ public class ProfileForm
 
 public class PostEditForm
 {
-    public int Id { get; set; }
+    /// <summary>Resolved from Uid on the server; never bound from the request.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever] public int Id { get; set; }
+    public Guid Uid { get; set; }
     public PostType Type { get; set; }
 
     /// <summary>Pages only. Chosen when the page is created and fixed afterwards.</summary>
@@ -218,7 +220,9 @@ public class PostEditForm
 
 public class UserEditForm
 {
-    public int Id { get; set; }
+    /// <summary>Resolved from Uid on the server; never bound from the request.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever] public int Id { get; set; }
+    public Guid Uid { get; set; }
 
     [Required, MaxLength(60), RegularExpression(@"^[A-Za-z0-9_.-]+$", ErrorMessage = "Letters, digits, _ . - only.")]
     public string UserName { get; set; } = "";

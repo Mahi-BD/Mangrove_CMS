@@ -42,6 +42,9 @@ public class User
 {
     public int Id { get; set; }
 
+    /// <summary>Public identifier used in URLs and forms, so records can't be guessed by counting.</summary>
+    public Guid Uid { get; set; } = Guid.NewGuid();
+
     [Required, MaxLength(60)]
     public string UserName { get; set; } = "";
 
@@ -70,6 +73,9 @@ public class User
 public class Post
 {
     public int Id { get; set; }
+
+    /// <summary>Public identifier used in URLs and forms, so records can't be guessed by counting.</summary>
+    public Guid Uid { get; set; } = Guid.NewGuid();
 
     public PostType Type { get; set; } = PostType.Post;
     public PostStatus Status { get; set; } = PostStatus.Draft;
@@ -126,6 +132,9 @@ public class Post
 public class Term
 {
     public int Id { get; set; }
+
+    /// <summary>Public identifier used in URLs and forms, so records can't be guessed by counting.</summary>
+    public Guid Uid { get; set; } = Guid.NewGuid();
     public TermType Type { get; set; }
 
     [Required, MaxLength(120)]
@@ -153,6 +162,9 @@ public class PostTerm
 public class Comment
 {
     public int Id { get; set; }
+
+    /// <summary>Public identifier used in URLs and forms, so records can't be guessed by counting.</summary>
+    public Guid Uid { get; set; } = Guid.NewGuid();
     public int PostId { get; set; }
     public Post? Post { get; set; }
 
@@ -182,6 +194,9 @@ public class Comment
 public class Media
 {
     public int Id { get; set; }
+
+    /// <summary>Public identifier used in URLs and forms, so records can't be guessed by counting.</summary>
+    public Guid Uid { get; set; } = Guid.NewGuid();
 
     [Required, MaxLength(260)]
     public string FileName { get; set; } = "";

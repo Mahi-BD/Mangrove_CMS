@@ -1,6 +1,6 @@
 @model PostEditForm
 <label for="Title" class="sr-only">Title</label>
-<input asp-for="Title" class="title-input" placeholder="Title" autofocus="@(Model.Id == 0)" autocomplete="off" />
+<input asp-for="Title" class="title-input" placeholder="Title" autofocus="@(Model.Uid == Guid.Empty)" autocomplete="off" />
 <span asp-validation-for="Title" class="field-error" style="padding:0 2rem"></span>
 <div class="slug-row">
     <label for="Slug" class="sr-only">Web address</label>

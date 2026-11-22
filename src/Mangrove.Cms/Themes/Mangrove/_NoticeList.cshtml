@@ -25,7 +25,7 @@
         <ol class="notice-list">
             @foreach (var n in r.Items)
             {
-                var url = $"/{slug}/notice/{n.Id}";
+                var url = $"/{slug}/notice/{n.Uid}";
                 <li class="notice-item @(n.IsPinned ? "pinned" : null)">
                     <time class="notice-date" datetime="@n.NoticeDate.ToString("yyyy-MM-dd")"><b>@n.NoticeDate.Day</b>@n.NoticeDate.ToString("MMM yyyy")</time>
                     <div class="notice-body">

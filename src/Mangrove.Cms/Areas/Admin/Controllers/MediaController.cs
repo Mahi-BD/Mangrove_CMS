@@ -62,9 +62,9 @@ public class MediaController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Update(int id, string? altText, string? caption)
+    public async Task<IActionResult> Update(Guid id, string? altText, string? caption)
     {
-        var m = await _db.Media.FindAsync(id);
+        var m = await _db.Media.FirstOrDefaultAsync(x => x.Uid == id);
         if (m == null) return NotFound();
         if (!User.AtLeast(UserRole.Editor) && m.UploadedById != CurrentUserId) return Forbid();
         m.AltText = altText?.Trim();
@@ -75,9 +75,9 @@ public class MediaController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var m = await _db.Media.FindAsync(id);
+        var m = await _db.Media.FirstOrDefaultAsync(x => x.Uid == id);
         if (m == null) return NotFound();
         if (!User.AtLeast(UserRole.Editor) && m.UploadedById != CurrentUserId) return Forbid();
 

@@ -77,15 +77,16 @@ public class PostsController : AdminController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Edit(int id)
+    public async Task<IActionResult> Edit(Guid id)
     {
-        var post = await _db.Posts.Include(p => p.PostTerms).ThenInclude(pt => pt.Term).FirstOrDefaultAsync(p => p.Id == id);
+        var post = await _db.Posts.Include(p => p.PostTerms).ThenInclude(pt => pt.Term).FirstOrDefaultAsync(p => p.Uid == id);
         if (post == null) return NotFound();
         if (!CanEdit(post)) return Forbid();
 
         var form = new PostEditForm
         {
             Id = post.Id,
+            Uid = post.Uid,
             Type = post.Type,
             Kind = post.Kind,
             Title = post.Title,
@@ -117,10 +118,11 @@ public class PostsController : AdminController
         if (!CanUseType(form.Type)) return Forbid();
 
         Post? post = null;
-        if (form.Id != 0)
+        if (form.Uid != Guid.Empty)
         {
-            post = await _db.Posts.Include(p => p.PostTerms).FirstOrDefaultAsync(p => p.Id == form.Id);
+            post = await _db.Posts.Include(p => p.PostTerms).FirstOrDefaultAsync(p => p.Uid == form.Uid);
             if (post == null) return NotFound();
+            form.Id = post.Id;
             if (!CanEdit(post)) return Forbid();
             form.Type = post.Type; // type can't change via form tampering
         }
@@ -222,7 +224,7 @@ public class PostsController : AdminController
             _ => "Draft saved.",
         });
 
-        return RedirectToAction(nameof(Edit), new { id = post.Id });
+        return RedirectToAction(nameof(Edit), new { id = post.Uid });
     }
 
     private async Task ApplyTermsAsync(Post post, PostEditForm form)
@@ -255,9 +257,9 @@ public class PostsController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Trash(int id)
+    public async Task<IActionResult> Trash(Guid id)
     {
-        var post = await _db.Posts.FindAsync(id);
+        var post = await _db.Posts.FirstOrDefaultAsync(p => p.Uid == id);
         if (post == null) return NotFound();
         if (!CanEdit(post)) return Forbid();
         post.Status = PostStatus.Trash;
@@ -268,9 +270,9 @@ public class PostsController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Restore(int id)
+    public async Task<IActionResult> Restore(Guid id)
     {
-        var post = await _db.Posts.FindAsync(id);
+        var post = await _db.Posts.FirstOrDefaultAsync(p => p.Uid == id);
         if (post == null) return NotFound();
         if (!CanEdit(post)) return Forbid();
         post.Status = PostStatus.Draft;
@@ -280,9 +282,9 @@ public class PostsController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var post = await _db.Posts.FindAsync(id);
+        var post = await _db.Posts.FirstOrDefaultAsync(p => p.Uid == id);
         if (post == null) return NotFound();
         if (!CanEdit(post)) return Forbid();
         if (post.Status != PostStatus.Trash)
