@@ -16,7 +16,8 @@
     // ---- Confirm dialogs: <form data-confirm="Are you sure?"> ----
     document.addEventListener('submit', function (e) {
         // e.target is the form being submitted, even when the button sits outside it (form="...").
-        var msg = e.target.getAttribute('data-confirm');
+        // A button can carry its own question (data-confirm-click), e.g. Delete inside a Save form.
+        var msg = (e.submitter && e.submitter.getAttribute('data-confirm-click')) || e.target.getAttribute('data-confirm');
         if (msg && !window.confirm(msg)) e.preventDefault();
     }, true);
 

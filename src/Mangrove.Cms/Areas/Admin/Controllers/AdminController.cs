@@ -33,16 +33,20 @@ public class DashboardController : AdminController
 
         var vm = new DashboardViewModel
         {
-            Posts = await posts.CountAsync(p => p.Status == PostStatus.Published || p.Status == PostStatus.Scheduled),
+            Posts = await posts.CountAsync(p => p.Status == PostStatus.Published),
             Drafts = await posts.CountAsync(p => p.Status == PostStatus.Draft),
             Pages = await _db.Posts.CountAsync(p => p.Type == PostType.Page && p.Status != PostStatus.Trash),
             PendingComments = await _db.Comments.CountAsync(c => c.Status == CommentStatus.Pending),
             Users = await _db.Users.CountAsync(),
             MediaFiles = await _db.Media.CountAsync(),
-            RecentPosts = await posts.Where(p => p.Status != PostStatus.Trash)
-                .OrderByDescending(p => p.UpdatedAt).Take(6).ToListAsync(),
-            RecentComments = User.AtLeast(UserRole.Editor)
-                ? await _db.Comments.Include(c => c.Post).OrderByDescending(c => c.CreatedAt).Take(6).ToListAsync()
+            Scheduled = await posts.CountAsync(p => p.Status == PostStatus.Scheduled),
+            RecentDrafts = await posts.Where(p => p.Status == PostStatus.Draft)
+                .OrderByDescending(p => p.UpdatedAt).Take(5).ToListAsync(),
+            RecentPublished = await posts.Where(p => p.Status == PostStatus.Published || p.Status == PostStatus.Scheduled)
+                .OrderByDescending(p => p.PublishedAt).Take(5).ToListAsync(),
+            PendingQueue = User.AtLeast(UserRole.Editor)
+                ? await _db.Comments.Include(c => c.Post).Where(c => c.Status == CommentStatus.Pending)
+                    .OrderByDescending(c => c.CreatedAt).Take(5).ToListAsync()
                 : new(),
         };
         return View(vm);

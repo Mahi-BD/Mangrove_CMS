@@ -1,9 +1,9 @@
-<dialog id="media-picker" class="media-picker">
+<dialog id="media-picker" class="media-picker" aria-labelledby="picker-title">
     <form method="dialog" class="picker-head">
-        <h2>Media library</h2>
-        <input type="search" placeholder="Search files…" data-picker-search aria-label="Search media" />
-        <label class="btn">Upload<input type="file" multiple hidden data-picker-upload accept="@MediaService.AcceptList" /></label>
-        <button class="btn" value="cancel">Close</button>
+        <h2 id="picker-title">Choose a file</h2>
+        <input type="search" placeholder="Search files" data-picker-search aria-label="Search files" />
+        <label class="btn sm"><svg class="ic"><use href="#i-upload" /></svg> Upload<input type="file" multiple hidden data-picker-upload accept="@MediaService.AcceptList" /></label>
+        <button class="btn sm quiet" value="cancel" aria-label="Close"><svg class="ic"><use href="#i-x" /></svg></button>
     </form>
     <p class="muted picker-status" data-picker-status></p>
     <div class="picker-grid" data-picker-grid></div>

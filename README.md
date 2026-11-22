@@ -18,11 +18,15 @@ It's a single, self-contained app: no database server to install, no Node build 
 | **Media library** | Upload, search, alt text and captions. File types are allow-listed, and SVG/HTML uploads are blocked |
 | **Comments** | Threaded replies, a moderation queue (approve, spam, trash), a honeypot and rate limiting |
 | **Users & roles** | Administrator, Editor, Author, Subscriber. Optional public registration |
-| **Themes** | Razor themes with fallback: a theme overrides only the views it needs. Ships with *Mangrove* and *Minimal* |
+| **Themes** | Razor themes with fallback: a theme overrides only the views it needs. Ships with *Mangrove* (magazine layout, Literata) and *Minimal* (single column) |
 | **Menus** | Primary and footer menus, with quick-add for pages and categories |
 | **SEO** | Clean `/slug` URLs (Unicode-friendly, e.g. Bangla), RSS feed (`/feed`), `sitemap.xml`, `robots.txt`, canonical and Open Graph tags |
 | **Security** | PBKDF2 password hashing, antiforgery on every POST, sanitized HTML output, login rate limiting, and sessions revoked on password or role change |
 | **Setup** | First-run wizard creates the admin account and optional sample content |
+
+## Design
+
+The admin and both themes use self-hosted open-source fonts ([Literata](https://github.com/googlefonts/literata) for reading, [Schibsted Grotesk](https://github.com/schibsted/schibsted-grotesk) for the interface; SIL OFL 1.1, in `wwwroot/fonts`). The palette comes from the mangrove forest: tidewater green, brackish teal and tannin amber. Light and dark mode follow the visitor's system setting.
 
 ## Quick start
 
@@ -77,8 +81,8 @@ src/Mangrove.Cms/
 ├── Themes/
 │   ├── Mangrove/            ← default theme (the full set of views)
 │   │   ├── theme.json
-│   │   ├── _Layout.cshtml   _Sidebar.cshtml   _PostCard.cshtml
-│   │   ├── Index.cshtml     ← home, blog, archives and search
+│   │   ├── _Layout.cshtml   _Footer.cshtml   _PostCard.cshtml   _PostMeta.cshtml
+│   │   ├── Index.cshtml     ← home (lead story + list), blog, archives and search
 │   │   ├── Single.cshtml    ← posts and pages
 │   │   └── NotFound.cshtml  Error.cshtml
 │   └── Minimal/             ← overrides only _Layout + CSS

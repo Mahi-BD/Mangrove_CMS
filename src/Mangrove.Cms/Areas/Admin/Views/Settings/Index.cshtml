@@ -1,35 +1,36 @@
 @model SettingsForm
 @{ ViewData["Title"] = "Settings"; var pages = (List<Post>)ViewBag.Pages; }
 <div class="page-head"><h1>Settings</h1></div>
-<form method="post" class="stack narrow-form">
+<form method="post" class="narrow-form">
     <div asp-validation-summary="ModelOnly" class="errors"></div>
-    <section class="panel stack">
-        <h2>General</h2>
-        <label asp-for="SiteTitle"></label>
+    <section class="panel">
+        <h2>Site</h2>
+        <label asp-for="SiteTitle">Site name</label>
         <input asp-for="SiteTitle" />
         <span asp-validation-for="SiteTitle" class="field-error"></span>
-        <label asp-for="Tagline"></label>
+        <label asp-for="Tagline">Tagline</label>
         <input asp-for="Tagline" />
-        <label asp-for="FooterText"></label>
+        <span class="hint">A short line about the site, shown under its name.</span>
+        <label asp-for="FooterText">Footer text</label>
         <input asp-for="FooterText" />
     </section>
-    <section class="panel stack">
-        <h2>Reading</h2>
-        <label asp-for="HomePageId"></label>
+    <section class="panel">
+        <h2>Home page</h2>
+        <label asp-for="HomePageId">Your home page shows</label>
         <select asp-for="HomePageId">
-            <option value="">Latest posts</option>
-            @foreach (var p in pages) { <option value="@p.Id">Page: @p.Title</option> }
+            <option value="">Your latest posts</option>
+            @foreach (var p in pages) { <option value="@p.Id">The page “@p.Title”</option> }
         </select>
-        <small class="muted">With a static homepage, the post list is still at <a href="/blog" target="_blank">/blog</a>.</small>
-        <label asp-for="PostsPerPage"></label>
-        <input asp-for="PostsPerPage" type="number" min="1" max="100" />
+        <span class="hint">With a page as the home page, your posts are listed at <a href="/blog" target="_blank">/blog</a>.</span>
+        <label asp-for="PostsPerPage">Posts per page</label>
+        <input asp-for="PostsPerPage" type="number" min="1" max="100" style="max-width:120px" />
         <span asp-validation-for="PostsPerPage" class="field-error"></span>
     </section>
-    <section class="panel stack">
-        <h2>Discussion &amp; membership</h2>
-        <label class="check"><input asp-for="CommentsEnabled" /> Allow people to comment on posts</label>
-        <label class="check"><input asp-for="CommentModeration" /> Hold new comments for approval</label>
-        <label class="check"><input asp-for="AllowRegistration" /> Anyone can register (as Subscriber)</label>
+    <section class="panel">
+        <h2>Comments and sign-ups</h2>
+        <label class="check"><input asp-for="CommentsEnabled" /> Let visitors comment on posts</label>
+        <label class="check"><input asp-for="CommentModeration" /> Review new comments before they appear</label>
+        <label class="check"><input asp-for="AllowRegistration" /> Let anyone create an account (as a Subscriber)</label>
     </section>
-    <div><button class="btn primary">Save changes</button></div>
+    <div class="actions"><button class="btn primary">Save settings</button></div>
 </form>

@@ -3,15 +3,13 @@
 @{
     var post = Model.Post;
     var isHome = ViewData["IsHome"] is true;
+    var isPost = post.Type == PostType.Post;
     ViewData["Title"] = isHome ? null : post.Title;
     ViewData["Description"] = post.MetaDescription ?? post.Excerpt ?? Renderer.PlainText(post.Content, 160);
     ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}/{(isHome ? "" : post.Slug)}";
     ViewData["EditUrl"] = $"/admin/posts/edit/{post.Id}";
+    ViewData["EditNoun"] = isPost ? "post" : "page";
     if (post.FeaturedMedia is { IsImage: true } fm) ViewData["OgImage"] = $"{Context.Request.Scheme}://{Context.Request.Host}{fm.Url}";
-
-    var author = post.Author;
-    var authorName = author == null ? "" : (string.IsNullOrWhiteSpace(author.DisplayName) ? author.UserName : author.DisplayName);
-    var categories = post.PostTerms.Where(pt => pt.Term?.Type == TermType.Category).Select(pt => pt.Term!).ToList();
     var tags = post.PostTerms.Where(pt => pt.Term?.Type == TermType.Tag).Select(pt => pt.Term!).ToList();
     var live = post.IsLive(DateTime.UtcNow);
     var byParent = Model.Comments.ToLookup(c => c.ParentId);
@@ -20,34 +18,18 @@
 <article class="entry entry-@post.Type.ToString().ToLowerInvariant()">
     @if (!live)
     {
-        <p class="notice">Preview: this @post.Type.ToString().ToLowerInvariant() is <strong>@post.Status.ToString().ToLowerInvariant()</strong> and not visible to visitors.</p>
+        <p class="notice">This is a preview. The @post.Type.ToString().ToLowerInvariant() is a @post.Status.ToString().ToLowerInvariant() and visitors can't see it yet.</p>
     }
-    <header class="entry-header">
+    <header class="entry-head">
         <h1>@post.Title</h1>
-        @if (post.Type == PostType.Post)
-        {
-            <p class="meta">
-                <time datetime="@post.PublishedAt?.ToString("O")">@post.PublishedAt?.ToString("MMMM d, yyyy")</time>
-                @if (author != null)
-                {
-                    <text> · by <a href="/author/@author.UserName">@authorName</a></text>
-                }
-                @foreach (var c in categories)
-                {
-                    <text> · </text><a href="/category/@c.Slug">@c.Name</a>
-                }
-            </p>
-        }
+        @if (isPost) { <partial name="_PostMeta" model="post" /> }
     </header>
 
     @if (post.FeaturedMedia is { IsImage: true } img)
     {
-        <figure class="featured">
+        <figure class="entry-figure">
             <img src="@img.Url" alt="@img.AltText" />
-            @if (!string.IsNullOrWhiteSpace(img.Caption))
-            {
-                <figcaption>@img.Caption</figcaption>
-            }
+            @if (!string.IsNullOrWhiteSpace(img.Caption)) { <figcaption>@img.Caption</figcaption> }
         </figure>
     }
 
@@ -57,79 +39,73 @@
 
     @if (tags.Count > 0)
     {
-        <p class="tags">
-            @foreach (var t in tags)
-            {
-                <a href="/tag/@t.Slug" rel="tag">#@t.Name</a>
-            }
-        </p>
+        <ul class="tags" aria-label="Tags">
+            @foreach (var t in tags) { <li><a href="/tag/@t.Slug" rel="tag">@t.Name</a></li> }
+        </ul>
+    }
+
+    @if (isPost && post.Author != null && !string.IsNullOrWhiteSpace(post.Author.Bio))
+    {
+        <aside class="byline-card">
+            <span class="byline-avatar" aria-hidden="true">@Fmt.Name(post.Author)[..1]</span>
+            <div>
+                <a href="/author/@post.Author.UserName" class="byline-name">@Fmt.Name(post.Author)</a>
+                <p>@post.Author.Bio</p>
+            </div>
+        </aside>
     }
 </article>
 
-@if (post.Type == PostType.Post && (Model.Previous != null || Model.Next != null))
+@if (isPost && (Model.Previous != null || Model.Next != null))
 {
-    <nav class="post-nav" aria-label="More posts">
-        @if (Model.Previous != null)
-        {
-            <a href="/@Model.Previous.Slug" rel="prev"><small>Previous</small>@Model.Previous.Title</a>
-        }
-        else { <span></span> }
-        @if (Model.Next != null)
-        {
-            <a href="/@Model.Next.Slug" rel="next" class="next"><small>Next</small>@Model.Next.Title</a>
-        }
+    <nav class="post-nav" aria-label="Other posts">
+        @if (Model.Previous != null) { <a href="/@Model.Previous.Slug" rel="prev"><small>Previous post</small>@Model.Previous.Title</a> } else { <span></span> }
+        @if (Model.Next != null) { <a href="/@Model.Next.Slug" rel="next" class="next"><small>Next post</small>@Model.Next.Title</a> }
     </nav>
 }
 
-@if (post.Type == PostType.Post)
+@if (isPost && (Model.Comments.Count > 0 || Model.CommentsOpen || !string.IsNullOrEmpty(Model.Flash)))
 {
     <section id="comments" class="comments">
-        @if (!string.IsNullOrEmpty(Model.Flash))
-        {
-            <p class="notice" role="status">@Model.Flash</p>
-        }
+        @if (!string.IsNullOrEmpty(Model.Flash)) { <p class="notice" role="status">@Model.Flash</p> }
 
+        <h2>@(Model.Comments.Count == 0 ? "Comments" : Model.Comments.Count == 1 ? "1 comment" : $"{Model.Comments.Count} comments")</h2>
         @if (Model.Comments.Count > 0)
         {
-            <h2>@Model.Comments.Count @(Model.Comments.Count == 1 ? "comment" : "comments")</h2>
             <ol class="comment-list">
-                @foreach (var c in byParent[null])
-                {
-                    RenderComment(c, 0);
-                }
+                @foreach (var c in byParent[null]) { RenderComment(c, 0); }
             </ol>
         }
 
         @if (Model.CommentsOpen)
         {
             <div id="respond" class="respond">
-                <h2>Leave a comment</h2>
+                <h3>@(Model.Comments.Count == 0 ? "Start the conversation" : "Add a comment")</h3>
                 <form method="post" asp-antiforgery="true" action="/comments" class="comment-form">
                     <input type="hidden" asp-for="CommentForm.PostId" name="PostId" />
                     <input type="hidden" name="ParentId" id="comment-parent" value="" />
-                    <p id="replying-to" hidden>Replying to <strong></strong> · <button type="button" class="linklike" data-cancel-reply>Cancel</button></p>
-                    <div class="hp" aria-hidden="true">
-                        <label>Leave this empty <input type="text" name="Website2" tabindex="-1" autocomplete="off" /></label>
-                    </div>
-                    <label>Comment <textarea name="Content" rows="5" required maxlength="5000"></textarea></label>
+                    <p id="replying-to" class="replying" hidden>Replying to <strong></strong>. <button type="button" class="linklike" data-cancel-reply>Cancel reply</button></p>
+                    <div class="hp" aria-hidden="true"><label>Leave this empty <input type="text" name="Website2" tabindex="-1" autocomplete="off" /></label></div>
+                    <label for="c-body">Comment</label>
+                    <textarea id="c-body" name="Content" rows="5" required maxlength="5000"></textarea>
                     <div class="row">
-                        <label>Name <input name="AuthorName" value="@Model.CommentForm.AuthorName" required maxlength="120" /></label>
-                        <label>Email <small>(not published)</small> <input type="email" name="AuthorEmail" value="@Model.CommentForm.AuthorEmail" maxlength="200" /></label>
+                        <div><label for="c-name">Name</label><input id="c-name" name="AuthorName" value="@Model.CommentForm.AuthorName" required maxlength="120" autocomplete="name" /></div>
+                        <div><label for="c-email">Email <small>(never shown)</small></label><input id="c-email" type="email" name="AuthorEmail" value="@Model.CommentForm.AuthorEmail" maxlength="200" autocomplete="email" /></div>
                     </div>
-                    <label>Website <input type="url" name="AuthorUrl" maxlength="300" placeholder="https://" /></label>
-                    <button type="submit">Post comment</button>
+                    <label for="c-url">Website <small>(optional)</small></label>
+                    <input id="c-url" type="url" name="AuthorUrl" maxlength="300" placeholder="https://" autocomplete="url" />
+                    <button type="submit" class="button">Post comment</button>
                 </form>
             </div>
             <script>
                 document.addEventListener('click', function (e) {
-                    var reply = e.target.closest('[data-reply]');
-                    var cancel = e.target.closest('[data-cancel-reply]');
+                    var reply = e.target.closest('[data-reply]'), cancel = e.target.closest('[data-cancel-reply]');
                     var box = document.getElementById('replying-to');
                     if (reply) {
                         document.getElementById('comment-parent').value = reply.dataset.reply;
                         box.querySelector('strong').textContent = reply.dataset.name;
                         box.hidden = false;
-                        document.querySelector('#respond textarea').focus();
+                        document.getElementById('c-body').focus();
                     } else if (cancel) {
                         document.getElementById('comment-parent').value = '';
                         box.hidden = true;
@@ -137,7 +113,7 @@
                 });
             </script>
         }
-        else if (Model.Comments.Count > 0)
+        else
         {
             <p class="muted">Comments are closed.</p>
         }
@@ -161,7 +137,7 @@
                         @c.AuthorName
                     }
                 </strong>
-                <time datetime="@c.CreatedAt.ToString("O")">@c.CreatedAt.ToString("MMMM d, yyyy 'at' HH:mm")</time>
+                <time datetime="@c.CreatedAt.ToString("O")" title="@c.CreatedAt.ToString("d MMMM yyyy, HH:mm") UTC">@Fmt.Ago(c.CreatedAt)</time>
             </div>
             <div class="comment-body">@Renderer.RenderComment(c.Content)</div>
             @if (Model.CommentsOpen && depth < 3)

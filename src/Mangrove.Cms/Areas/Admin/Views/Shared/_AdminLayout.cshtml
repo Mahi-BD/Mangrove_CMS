@@ -1,4 +1,6 @@
+@using Microsoft.EntityFrameworkCore
 @inject SettingsService Settings
+@inject Mangrove.Cms.Data.CmsDbContext Db
 @{
     var siteTitle = await Settings.GetAsync(SettingKeys.SiteTitle);
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
@@ -10,7 +12,10 @@
         "Terms" => (ViewData["TermType"] as string ?? type) == "Tag" ? "Tags" : "Categories",
         _ => controller,
     };
-    string Active(string key) => navKey == key ? "active" : "";
+    string? Active(string key) => navKey == key ? "active" : null;
+    string? Current(string key) => navKey == key ? "page" : null;
+    var pending = User.AtLeast(UserRole.Editor) ? await Db.Comments.CountAsync(c => c.Status == CommentStatus.Pending) : 0;
+    var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? "";
     var flash = TempData["Flash"] as string;
     var flashKind = TempData["FlashKind"] as string ?? "success";
 }
@@ -20,48 +25,61 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>@ViewData["Title"] ‹ @siteTitle — Mangrove</title>
+    <title>@ViewData["Title"] | @siteTitle</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/fonts/schibsted-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/css/admin.css" asp-append-version="true" />
 </head>
 <body class="admin">
+    <partial name="_Icons" />
     <input type="checkbox" id="nav-toggle" class="nav-toggle" hidden />
     <aside class="admin-nav">
-        <a class="admin-brand" href="/admin"><img src="/favicon.svg" alt="" width="28" height="28" /> Mangrove</a>
+        <a class="admin-brand" href="/admin">
+            <img src="/favicon.svg" alt="" width="32" height="32" />
+            <span><strong>Mangrove</strong><span>@siteTitle</span></span>
+        </a>
+        <a class="btn primary nav-write" href="/admin/posts/create"><svg class="ic"><use href="#i-plus" /></svg> New post</a>
         <nav aria-label="Admin">
-            <a class="@Active("Dashboard")" href="/admin">Dashboard</a>
+            <a class="@Active("Dashboard")" aria-current="@Current("Dashboard")" href="/admin"><svg class="ic"><use href="#i-dashboard" /></svg> Dashboard</a>
+
             <div class="nav-group">Content</div>
-            <a class="@Active("Posts")" href="/admin/posts">Posts</a>
+            <a class="@Active("Posts")" aria-current="@Current("Posts")" href="/admin/posts"><svg class="ic"><use href="#i-posts" /></svg> Posts</a>
             @if (User.AtLeast(UserRole.Editor))
             {
-                <a class="@Active("Pages")" href="/admin/posts?type=Page">Pages</a>
-                <a class="@Active("Categories")" href="/admin/terms?type=Category">Categories</a>
-                <a class="@Active("Tags")" href="/admin/terms?type=Tag">Tags</a>
+                <a class="@Active("Pages")" aria-current="@Current("Pages")" href="/admin/posts?type=Page"><svg class="ic"><use href="#i-pages" /></svg> Pages</a>
             }
-            <a class="@Active("Media")" href="/admin/media">Media</a>
+            <a class="@Active("Media")" aria-current="@Current("Media")" href="/admin/media"><svg class="ic"><use href="#i-media" /></svg> Media</a>
             @if (User.AtLeast(UserRole.Editor))
             {
-                <a class="@Active("Comments")" href="/admin/comments">Comments</a>
-                <div class="nav-group">Appearance</div>
-                <a class="@Active("Menus")" href="/admin/menus">Menus</a>
+                <a class="@Active("Comments")" aria-current="@Current("Comments")" href="/admin/comments"><svg class="ic"><use href="#i-comments" /></svg> Comments
+                    @if (pending > 0) { <span class="nav-count" title="@pending waiting for review">@pending</span> }
+                </a>
+                <a class="@Active("Categories")" aria-current="@Current("Categories")" href="/admin/terms?type=Category"><svg class="ic"><use href="#i-category" /></svg> Categories</a>
+                <a class="@Active("Tags")" aria-current="@Current("Tags")" href="/admin/terms?type=Tag"><svg class="ic"><use href="#i-tag" /></svg> Tags</a>
+
+                <div class="nav-group">Site</div>
+                <a class="@Active("Menus")" aria-current="@Current("Menus")" href="/admin/menus"><svg class="ic"><use href="#i-menus" /></svg> Menus</a>
             }
             @if (User.AtLeast(UserRole.Administrator))
             {
-                <a class="@Active("Themes")" href="/admin/themes">Themes</a>
-                <div class="nav-group">System</div>
-                <a class="@Active("Users")" href="/admin/users">Users</a>
-                <a class="@Active("Settings")" href="/admin/settings">Settings</a>
+                <a class="@Active("Themes")" aria-current="@Current("Themes")" href="/admin/themes"><svg class="ic"><use href="#i-themes" /></svg> Themes</a>
+                <a class="@Active("Users")" aria-current="@Current("Users")" href="/admin/users"><svg class="ic"><use href="#i-users" /></svg> Users</a>
+                <a class="@Active("Settings")" aria-current="@Current("Settings")" href="/admin/settings"><svg class="ic"><use href="#i-settings" /></svg> Settings</a>
             }
         </nav>
+        <div class="nav-foot">
+            <a href="https://github.com/Mahi-BD/Mangrove_CMS" target="_blank" rel="noopener">Mangrove CMS @(typeof(Program).Assembly.GetName().Version?.ToString(3))</a>
+        </div>
     </aside>
+
     <div class="admin-main">
         <header class="admin-top">
-            <label for="nav-toggle" class="nav-burger" aria-label="Menu">☰</label>
-            <a href="/" target="_blank" rel="noopener" class="view-site">@siteTitle ↗</a>
+            <label for="nav-toggle" class="nav-burger btn icon quiet" aria-label="Open menu"><svg class="ic"><use href="#i-burger" /></svg></label>
+            <a href="/" target="_blank" rel="noopener" class="view-site">Visit site <svg class="ic"><use href="#i-external" /></svg></a>
             <div class="spacer"></div>
-            <a href="/account/profile">@(User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value)</a>
+            <a href="/account/profile" class="user-chip" title="Your profile"><span class="avatar" aria-hidden="true">@(displayName.Length > 0 ? displayName[..1] : "?")</span> @displayName</a>
             <form method="post" asp-antiforgery="true" action="/account/logout" class="inline">
-                <button type="submit" class="linklike">Log out</button>
+                <button type="submit" class="btn sm quiet">Log out</button>
             </form>
         </header>
         <main class="admin-content">

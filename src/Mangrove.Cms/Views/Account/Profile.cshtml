@@ -1,30 +1,33 @@
 @model ProfileForm
 @{ ViewData["Title"] = "Your profile"; }
-<section class="form-page">
-    <h1>Your profile</h1>
-    @if (ViewData["Saved"] is string saved)
-    {
-        <p class="notice" role="status">@saved</p>
-    }
-    <form method="post" asp-action="Profile" class="stack">
-        <div asp-validation-summary="ModelOnly" class="errors"></div>
-        <label asp-for="DisplayName"></label>
+<h1>Your profile</h1>
+<p class="lede">@(User.AtLeast(UserRole.Author) ? Html.Raw("Your name and bio appear on your posts. <a href=\"/admin\">Back to the dashboard</a>") : Html.Raw("<a href=\"/\">Back to the site</a>"))</p>
+@if (ViewData["Saved"] is string saved)
+{
+    <div class="flash" role="status">@saved</div>
+}
+<form method="post" asp-action="Profile">
+    <div asp-validation-summary="ModelOnly" class="errors"></div>
+    <fieldset>
+        <legend>About you</legend>
+        <label asp-for="DisplayName">Display name</label>
         <input asp-for="DisplayName" />
-        <label asp-for="Email"></label>
+        <label asp-for="Email">Email</label>
         <input asp-for="Email" autocomplete="email" />
         <span asp-validation-for="Email" class="field-error"></span>
-        <label asp-for="Bio"></label>
-        <textarea asp-for="Bio" rows="4"></textarea>
-        <fieldset>
-            <legend>Change password</legend>
-            <label asp-for="CurrentPassword"></label>
-            <input asp-for="CurrentPassword" autocomplete="current-password" />
-            <span asp-validation-for="CurrentPassword" class="field-error"></span>
-            <label asp-for="NewPassword"></label>
-            <input asp-for="NewPassword" autocomplete="new-password" />
-            <span asp-validation-for="NewPassword" class="field-error"></span>
-        </fieldset>
-        <button type="submit">Save profile</button>
-    </form>
-    <form method="post" asp-antiforgery="true" action="/account/logout"><button type="submit" class="linklike">Log out</button></form>
-</section>
+        <label asp-for="Bio">Bio</label>
+        <textarea asp-for="Bio" rows="3"></textarea>
+    </fieldset>
+    <fieldset>
+        <legend>Change password</legend>
+        <label asp-for="CurrentPassword">Current password</label>
+        <input asp-for="CurrentPassword" autocomplete="current-password" />
+        <span asp-validation-for="CurrentPassword" class="field-error"></span>
+        <label asp-for="NewPassword">New password</label>
+        <input asp-for="NewPassword" autocomplete="new-password" />
+        <span asp-validation-for="NewPassword" class="field-error"></span>
+        <span class="hint">Leave both empty to keep your password.</span>
+    </fieldset>
+    <button type="submit" class="btn primary">Save profile</button>
+</form>
+<form method="post" asp-antiforgery="true" action="/account/logout" style="margin-top:1rem"><button type="submit" class="btn quiet" style="width:100%">Log out</button></form>

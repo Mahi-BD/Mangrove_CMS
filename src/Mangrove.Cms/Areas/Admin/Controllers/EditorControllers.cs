@@ -94,13 +94,20 @@ public class CommentsController : AdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> SetStatus(int id, CommentStatus status, CommentStatus? from)
+    public async Task<IActionResult> SetStatus(int id, CommentStatus status, CommentStatus? from, string? returnTo)
     {
         var c = await _db.Comments.FindAsync(id);
         if (c == null) return NotFound();
         c.Status = status;
         await _db.SaveChangesAsync();
-        Flash($"Comment marked {status.ToString().ToLowerInvariant()}.");
+        Flash(status switch
+        {
+            CommentStatus.Approved => "Comment approved.",
+            CommentStatus.Pending => "Comment moved back to pending.",
+            CommentStatus.Spam => "Comment marked as spam.",
+            _ => "Comment moved to the trash.",
+        });
+        if (!string.IsNullOrEmpty(returnTo) && Url.IsLocalUrl(returnTo)) return LocalRedirect(returnTo);
         return RedirectToAction(nameof(Index), new { status = from });
     }
 

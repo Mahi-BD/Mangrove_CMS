@@ -1,27 +1,35 @@
 @model UserEditForm
 @{ ViewData["Title"] = Model.Id == 0 ? "Add user" : "Edit user"; }
-<div class="page-head"><h1>@ViewData["Title"]</h1></div>
-<form method="post" asp-antiforgery="true" action="/admin/users/save" class="panel stack narrow-form">
+<div class="page-head"><h1>@(Model.Id == 0 ? "Add user" : Model.UserName)</h1></div>
+<form method="post" asp-antiforgery="true" action="/admin/users/save" class="narrow-form">
     <div asp-validation-summary="ModelOnly" class="errors"></div>
     <input type="hidden" asp-for="Id" />
-    <label asp-for="UserName">Username</label>
-    <input asp-for="UserName" autocomplete="off" />
-    <span asp-validation-for="UserName" class="field-error"></span>
-    <label asp-for="Email"></label>
-    <input asp-for="Email" autocomplete="off" />
-    <span asp-validation-for="Email" class="field-error"></span>
-    <label asp-for="DisplayName"></label>
-    <input asp-for="DisplayName" />
-    <label asp-for="Role"></label>
-    <select asp-for="Role" asp-items="Html.GetEnumSelectList<UserRole>().Reverse()"></select>
-    <span asp-validation-for="Role" class="field-error"></span>
-    <small class="muted">Subscriber: profile only · Author: own posts · Editor: all content · Administrator: everything</small>
-    <label asp-for="Password"></label>
-    <input asp-for="Password" autocomplete="new-password" />
-    <span asp-validation-for="Password" class="field-error"></span>
-    <label class="check"><input asp-for="IsActive" /> Account active</label>
+    <section class="panel">
+        <h2>Account</h2>
+        <label asp-for="UserName">Username</label>
+        <input asp-for="UserName" autocomplete="off" />
+        <span asp-validation-for="UserName" class="field-error"></span>
+        <label asp-for="Email">Email</label>
+        <input asp-for="Email" autocomplete="off" />
+        <span asp-validation-for="Email" class="field-error"></span>
+        <label asp-for="DisplayName">Display name</label>
+        <input asp-for="DisplayName" />
+        <span class="hint">Shown on posts. Defaults to the username.</span>
+    </section>
+    <section class="panel">
+        <h2>Access</h2>
+        <label asp-for="Role">Role</label>
+        <select asp-for="Role" asp-items="Html.GetEnumSelectList<UserRole>().Reverse()"></select>
+        <span asp-validation-for="Role" class="field-error"></span>
+        <span class="hint">Subscribers can comment and edit their profile. Authors write and publish their own posts. Editors manage all content. Administrators also manage users, settings and themes.</span>
+        <label asp-for="Password">@(Model.Id == 0 ? "Password" : "New password")</label>
+        <input asp-for="Password" autocomplete="new-password" />
+        <span asp-validation-for="Password" class="field-error"></span>
+        <span class="hint">@(Model.Id == 0 ? "At least 8 characters." : "Leave empty to keep the current password.")</span>
+        <label class="check" style="margin-top:1rem"><input asp-for="IsActive" /> Can sign in</label>
+    </section>
     <div class="actions">
-        <button class="btn primary">@(Model.Id == 0 ? "Create user" : "Save user")</button>
-        <a class="btn" href="/admin/users">Cancel</a>
+        <button class="btn primary">@(Model.Id == 0 ? "Add user" : "Save changes")</button>
+        <a class="btn quiet" href="/admin/users">Cancel</a>
     </div>
 </form>

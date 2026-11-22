@@ -1,52 +1,68 @@
 @model PostListViewModel
+@inject ContentRenderer Renderer
 @{
     ViewData["Title"] = Model.IsHome ? null : Model.Heading;
     if (!string.IsNullOrWhiteSpace(Model.Description)) ViewData["Description"] = Model.Description;
+    var items = Model.Result.Items.ToList();
+    var lead = Model.IsHome && Model.Result.Page == 1 && items.Count > 0 ? items[0] : null;
+    var rest = lead == null ? items : items.Skip(1).ToList();
 }
 
 @if (!Model.IsHome)
 {
-    <header class="archive-header">
+    <header class="archive-head">
         <h1>@Model.Heading</h1>
-        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        @if (!string.IsNullOrWhiteSpace(Model.Description)) { <p>@Model.Description</p> }
+        @if (Model.SearchQuery != null)
         {
-            <p>@Model.Description</p>
+            <form action="/search" method="get" role="search" class="search-big">
+                <label for="q" class="sr-only">Search</label>
+                <input id="q" type="search" name="q" value="@Model.SearchQuery" placeholder="Search posts" autofocus="@(Model.SearchQuery.Length == 0)" />
+                <button type="submit" class="button">Search</button>
+            </form>
         }
     </header>
 }
 
-@if (Model.SearchQuery != null)
+@if (items.Count == 0)
 {
-    <form action="/search" method="get" role="search" class="search-form big">
-        <label for="q" class="sr-only">Search</label>
-        <input id="q" type="search" name="q" value="@Model.SearchQuery" placeholder="Search posts…" autofocus />
-        <button type="submit">Search</button>
-    </form>
+    <p class="empty">
+        @if (Model.SearchQuery is { Length: > 0 }) { <text>Nothing matches “@Model.SearchQuery”. Try a shorter or different word.</text> }
+        else if (Model.SearchQuery != null) { <text>Type a word or two to search every post.</text> }
+        else { <text>Nothing has been published here yet.</text> }
+    </p>
 }
 
-@if (Model.Result.Items.Count == 0)
+@if (lead != null)
 {
-    <p class="empty">@(Model.SearchQuery is { Length: > 0 } ? "Nothing matched your search. Try different words." : "Nothing here yet.")</p>
+    var excerpt = string.IsNullOrWhiteSpace(lead.Excerpt) ? Renderer.PlainText(lead.Content, 320) : lead.Excerpt;
+    <article class="lead @(lead.FeaturedMedia is { IsImage: true } ? "has-image" : null)">
+        <div class="lead-text">
+            <h2 class="lead-title"><a href="/@lead.Slug">@lead.Title</a></h2>
+            <partial name="_PostMeta" model="lead" />
+            <p class="lead-excerpt">@excerpt</p>
+            <a class="read" href="/@lead.Slug">Read the full post<span class="sr-only">: @lead.Title</span></a>
+        </div>
+        @if (lead.FeaturedMedia is { IsImage: true } img)
+        {
+            <a class="lead-image" href="/@lead.Slug" tabindex="-1" aria-hidden="true"><img src="@img.Url" alt="" /></a>
+        }
+    </article>
 }
-else
+
+@if (rest.Count > 0)
 {
-    foreach (var post in Model.Result.Items)
-    {
-        <partial name="_PostCard" model="post" />
-    }
+    <section class="entries" aria-label="@(lead != null ? "More posts" : Model.Heading)">
+        @if (lead != null) { <h2 class="section-title">More writing</h2> }
+        @foreach (var post in rest) { <partial name="_PostCard" model="post" /> }
+    </section>
 }
 
 @if (Model.Result.TotalPages > 1)
 {
-    <nav class="pager" aria-label="Pages">
-        @if (Model.Result.HasNext)
-        {
-            <a href="@string.Format(Model.PageUrlFormat, Model.Result.Page + 1)">← Older posts</a>
-        }
-        <span>Page @Model.Result.Page of @Model.Result.TotalPages</span>
-        @if (Model.Result.HasPrevious)
-        {
-            <a href="@string.Format(Model.PageUrlFormat, Model.Result.Page - 1)">Newer posts →</a>
-        }
+    <nav class="pager" aria-label="More pages">
+        @if (Model.Result.HasNext) { <a class="button ghost" href="@string.Format(Model.PageUrlFormat, Model.Result.Page + 1)">Older posts</a> } else { <span></span> }
+        <span class="pager-count">Page @Model.Result.Page of @Model.Result.TotalPages</span>
+        @if (Model.Result.HasPrevious) { <a class="button ghost" href="@string.Format(Model.PageUrlFormat, Model.Result.Page - 1)">Newer posts</a> } else { <span></span> }
     </nav>
 }

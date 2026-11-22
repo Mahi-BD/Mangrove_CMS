@@ -1,0 +1,27 @@
+@* Mangrove prop roots arching down from the canopy to the waterline, with pneumatophores
+   (breathing roots) poking up from the mud. Irregular on purpose. Colour comes from CSS `color`. *@
+@{ var id = "roots-" + Guid.NewGuid().ToString("N")[..6]; }
+<svg class="roots" width="100%" height="46" aria-hidden="true" focusable="false">
+    <defs>
+        <pattern id="@id" width="300" height="46" patternUnits="userSpaceOnUse">
+            <g fill="none" stroke="currentColor" stroke-linecap="round">
+                <g stroke-width="1.6">
+                    <path d="M46 0v7" />
+                    <path d="M46 5C38 6 26 10 21 40M46 5c7 1 19 6 24 35M46 9c-5 3-10 12-11 31M46 9c4 4 7 14 7 31M46 13c-12 5-27 9-36 27" />
+                </g>
+                <g stroke-width="1.3">
+                    <path d="M152 0v4" />
+                    <path d="M152 3c-6 1-14 6-17 37M152 3c8 2 15 10 18 37M152 8c-3 5-5 18-5 32M152 8c10 4 22 12 30 32" />
+                </g>
+                <g stroke-width="1.5">
+                    <path d="M241 0v9" />
+                    <path d="M241 7c-9 1-20 9-24 33M241 7c6 2 13 12 15 33M241 11c-2 6-2 18-1 29M241 12c10 3 25 10 33 28" />
+                </g>
+                <path d="M96 40v-6M103 40v-4M110 40v-7M198 40v-5M205 40v-3M284 40v-5M5 40v-4" stroke-width="1.2" opacity=".6" />
+            </g>
+            <path d="M0 40.5h300" stroke="currentColor" stroke-width="1" opacity=".45" />
+            <path d="M60 44.5h40M180 44.5h26M255 44.5h18" stroke="currentColor" stroke-width="1" opacity=".25" stroke-linecap="round" />
+        </pattern>
+    </defs>
+    <rect width="100%" height="46" fill="url(#@id)" />
+</svg>

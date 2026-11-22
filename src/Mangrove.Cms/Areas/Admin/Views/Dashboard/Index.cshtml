@@ -1,61 +1,114 @@
 @model DashboardViewModel
-@{ ViewData["Title"] = "Dashboard"; }
+@{
+    ViewData["Title"] = "Dashboard";
+    var name = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+    var parts = new List<string> { $"{Model.Posts} published {(Model.Posts == 1 ? "post" : "posts")}" };
+    if (Model.Drafts > 0) parts.Add($"{Model.Drafts} {(Model.Drafts == 1 ? "draft" : "drafts")}");
+    if (Model.Scheduled > 0) parts.Add($"{Model.Scheduled} scheduled");
+    var summary = parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
+}
 <div class="page-head">
-    <h1>Dashboard</h1>
-    <a class="btn primary" href="/admin/posts/create">New post</a>
+    <h1>Hello, @name</h1>
+    <p class="lede">
+        You have @summary@(Model.PendingComments > 0 && User.AtLeast(UserRole.Editor) ? $", and {Model.PendingComments} {(Model.PendingComments == 1 ? "comment is" : "comments are")} waiting for review" : "").
+    </p>
 </div>
 
-<div class="stats">
-    <a class="stat" href="/admin/posts"><strong>@Model.Posts</strong><span>Published posts</span></a>
-    <a class="stat" href="/admin/posts?status=Draft"><strong>@Model.Drafts</strong><span>Drafts</span></a>
+<div class="glance">
+    <a href="/admin/posts?status=Published"><strong>@Model.Posts</strong>Published</a>
+    <a href="/admin/posts?status=Draft"><strong>@Model.Drafts</strong>Drafts</a>
     @if (User.AtLeast(UserRole.Editor))
     {
-        <a class="stat" href="/admin/posts?type=Page"><strong>@Model.Pages</strong><span>Pages</span></a>
-        <a class="stat @(Model.PendingComments > 0 ? "attention" : null)" href="/admin/comments?status=Pending"><strong>@Model.PendingComments</strong><span>Pending comments</span></a>
+        <a href="/admin/posts?type=Page"><strong>@Model.Pages</strong>Pages</a>
+        <a href="/admin/comments?status=Pending" class="@(Model.PendingComments > 0 ? "attention" : null)"><strong>@Model.PendingComments</strong>To review</a>
     }
-    <a class="stat" href="/admin/media"><strong>@Model.MediaFiles</strong><span>Media files</span></a>
+    <a href="/admin/media"><strong>@Model.MediaFiles</strong>Media files</a>
     @if (User.AtLeast(UserRole.Administrator))
     {
-        <a class="stat" href="/admin/users"><strong>@Model.Users</strong><span>Users</span></a>
+        <a href="/admin/users"><strong>@Model.Users</strong>Users</a>
     }
 </div>
 
 <div class="grid-2">
-    <section class="panel">
-        <h2>Recently edited</h2>
-        @if (Model.RecentPosts.Count == 0)
-        {
-            <p class="muted">Nothing yet. <a href="/admin/posts/create">Write your first post</a>.</p>
-        }
-        <ul class="plain">
-            @foreach (var p in Model.RecentPosts)
-            {
-                <li>
-                    <a href="/admin/posts/edit/@p.Id">@p.Title</a>
-                    <span class="status status-@p.Status.ToString().ToLowerInvariant()">@p.Status</span>
-                    <small class="muted">@p.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</small>
-                </li>
-            }
-        </ul>
-    </section>
-    @if (User.AtLeast(UserRole.Editor))
-    {
+    <div>
+        <section class="panel quick-draft">
+            <h2>Quick draft</h2>
+            <form method="post" asp-antiforgery="true" action="/admin/posts/save">
+                <input type="hidden" name="Type" value="Post" />
+                <input type="hidden" name="Status" value="Draft" />
+                <input type="hidden" name="AllowComments" value="true" />
+                <label for="qd-title" class="sr-only">Title</label>
+                <input id="qd-title" name="Title" placeholder="Title" required maxlength="300" />
+                <label for="qd-body" class="sr-only">What's on your mind?</label>
+                <textarea id="qd-body" name="Content" rows="4" placeholder="Jot down an idea. It's saved as a draft." style="margin-top:.6rem"></textarea>
+                <div class="actions" style="margin-top:.8rem"><button class="btn">Save draft</button></div>
+            </form>
+        </section>
+
         <section class="panel">
-            <h2>Latest comments</h2>
-            @if (Model.RecentComments.Count == 0)
+            <h2>Your drafts @if (Model.Drafts > 0) { <a class="more" href="/admin/posts?status=Draft">See all</a> }</h2>
+            @if (Model.RecentDrafts.Count == 0)
             {
-                <p class="muted">No comments yet.</p>
+                <p class="muted" style="margin:0">No drafts. Everything you start writing appears here until you publish it.</p>
             }
-            <ul class="plain">
-                @foreach (var c in Model.RecentComments)
+            <ul class="list">
+                @foreach (var p in Model.RecentDrafts)
+                {
+                    <li><span class="grow"><a class="title" href="/admin/posts/edit/@p.Id">@p.Title</a></span><span class="when">Edited @Fmt.Ago(p.UpdatedAt)</span></li>
+                }
+            </ul>
+        </section>
+    </div>
+
+    <div>
+        @if (User.AtLeast(UserRole.Editor))
+        {
+            <section class="panel">
+                <h2>Waiting for review @if (Model.PendingComments > 0) { <a class="more" href="/admin/comments?status=Pending">See all</a> }</h2>
+                @if (Model.PendingQueue.Count == 0)
+                {
+                    <p class="muted" style="margin:0">No comments are waiting. New ones that need approval show up here.</p>
+                }
+                <ul class="list">
+                    @foreach (var c in Model.PendingQueue)
+                    {
+                        <li>
+                            <div class="grow">
+                                <strong>@c.AuthorName</strong> <span class="muted">on</span> <a href="/@c.Post?.Slug" target="_blank">@c.Post?.Title</a>
+                                <p class="quote">@c.Content</p>
+                                <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Id" class="inline">
+                                    <input type="hidden" name="status" value="Approved" /><input type="hidden" name="returnTo" value="/admin" />
+                                    <button class="btn sm">Approve</button>
+                                </form>
+                                <form method="post" asp-antiforgery="true" action="/admin/comments/setstatus/@c.Id" class="inline">
+                                    <input type="hidden" name="status" value="Spam" /><input type="hidden" name="returnTo" value="/admin" />
+                                    <button class="btn sm quiet danger">Spam</button>
+                                </form>
+                            </div>
+                            <span class="when">@Fmt.Ago(c.CreatedAt)</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        <section class="panel">
+            <h2>Recently published</h2>
+            @if (Model.RecentPublished.Count == 0)
+            {
+                <p class="muted" style="margin:0">Nothing published yet. <a href="/admin/posts/create">Write your first post</a>.</p>
+            }
+            <ul class="list">
+                @foreach (var p in Model.RecentPublished)
                 {
                     <li>
-                        <strong>@c.AuthorName</strong> on <a href="/@c.Post?.Slug#comment-@c.Id" target="_blank">@c.Post?.Title</a>
-                        <span class="status status-@c.Status.ToString().ToLowerInvariant()">@c.Status</span>
-                        <div class="muted clip">@c.Content</div>
+                        <span class="grow"><a class="title" href="/admin/posts/edit/@p.Id">@p.Title</a>
+                            @if (p.Status == PostStatus.Scheduled) { <span class="status status-scheduled">Scheduled</span> }
+                        </span>
+                        <span class="when">@(p.PublishedAt.HasValue ? Fmt.Ago(p.PublishedAt.Value) : "")</span>
                     </li>
                 }
             </ul>
         </section>
-    }
+    </div>
 </div>

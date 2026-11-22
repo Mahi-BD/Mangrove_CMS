@@ -10,13 +10,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@(string.IsNullOrEmpty(pageTitle) ? siteTitle : $"{pageTitle} – {siteTitle}")</title>
+    <title>@(string.IsNullOrEmpty(pageTitle) ? siteTitle : $"{pageTitle} | {siteTitle}")</title>
     <meta name="description" content="@description" />
     <meta name="generator" content="Mangrove CMS" />
-    @if (ViewData["Canonical"] is string canonical)
-    {
-        <link rel="canonical" href="@canonical" />
-    }
+    @if (ViewData["Canonical"] is string canonical) { <link rel="canonical" href="@canonical" /> }
+    @if (ViewData["OgImage"] is string og) { <meta property="og:image" content="@og" /> }
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="alternate" type="application/rss+xml" title="@siteTitle" href="/feed" />
     <link rel="stylesheet" href="/themes/mangrove/style.css" asp-append-version="true" />
@@ -24,24 +22,23 @@
 </head>
 <body class="theme-minimal">
     <a class="skip-link" href="#content">Skip to content</a>
-    <header class="site-header">
-        <div class="wrap narrow">
-            <a class="site-title" href="/">@siteTitle</a>
-            <nav class="site-nav" aria-label="Primary">
-                @await Component.InvokeAsync("Menu", new { location = "primary" })
-            </nav>
-        </div>
+    <header class="min-head wrap">
+        <a class="site-title" href="/">@siteTitle</a>
+        <nav class="site-nav" aria-label="Main">
+            @await Component.InvokeAsync("Menu", new { location = "primary" })
+            <a href="/search" class="min-search">Search</a>
+        </nav>
     </header>
-    <main id="content" class="wrap narrow content">
+    <main id="content" class="wrap site-main">
         @RenderBody()
     </main>
-    <footer class="site-footer">
-        <div class="wrap narrow">
-            @await Component.InvokeAsync("Menu", new { location = "footer" })
-            <p>@site[SettingKeys.FooterText] · <a href="/feed">RSS</a> ·
-                @if (User.AtLeast(UserRole.Author)) { <a href="/admin">Dashboard</a> } else { <a href="/account/login">Log in</a> }
-            </p>
-        </div>
+    <footer class="min-foot wrap">
+        @await Component.InvokeAsync("Menu", new { location = "footer" })
+        <p>@site[SettingKeys.FooterText]</p>
+        <p><a href="/feed">RSS</a>
+            @if (User.AtLeast(UserRole.Author)) { <a href="/admin">Dashboard</a> }
+            else if (User.Identity?.IsAuthenticated != true) { <a href="/account/login">Log in</a> }
+        </p>
     </footer>
 </body>
 </html>

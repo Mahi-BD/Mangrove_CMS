@@ -4,52 +4,60 @@
     var location = (string)ViewBag.Location;
     var pages = (List<Post>)ViewBag.Pages;
     var categories = (List<Term>)ViewBag.Categories;
+    var names = new Dictionary<string, string> { ["primary"] = "Main menu", ["footer"] = "Footer menu" };
 }
-<div class="page-head"><h1>Menus</h1></div>
-<nav class="filters toolbar">
-    @foreach (var loc in Mangrove.Cms.Areas.Admin.Controllers.MenusController.Locations)
-    {
-        <a class="@(loc == location ? "active" : null)" href="/admin/menus?location=@loc">@(char.ToUpper(loc[0]) + loc[1..]) menu</a>
-    }
-</nav>
+<div class="page-head">
+    <h1>Menus</h1>
+    <p class="lede">The main menu sits at the top of every page; the footer menu at the bottom.</p>
+</div>
+<div class="toolbar">
+    <nav class="filters" aria-label="Choose a menu">
+        @foreach (var loc in Mangrove.Cms.Areas.Admin.Controllers.MenusController.Locations)
+        {
+            <a class="@(loc == location ? "active" : null)" href="/admin/menus?location=@loc">@names[loc]</a>
+        }
+    </nav>
+</div>
 <div class="grid-side">
     <div>
-        <section class="panel">
-            <h2>Add a custom link</h2>
-            <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="stack">
-                <input type="hidden" name="location" value="@location" />
-                <label>Label <input name="label" required maxlength="120" /></label>
-                <label>URL <input name="url" required placeholder="/about or https://…" maxlength="500" /></label>
-                <label class="check"><input type="checkbox" name="openInNewTab" value="true" /> Open in a new tab</label>
-                <button class="btn primary">Add to menu</button>
-            </form>
-        </section>
         @if (pages.Count > 0 || categories.Count > 0)
         {
             <section class="panel">
-                <h2>Quick add</h2>
+                <h2>Add a page or category</h2>
                 <div class="quick-add">
                     @foreach (var p in pages)
                     {
                         <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="inline">
                             <input type="hidden" name="location" value="@location" /><input type="hidden" name="label" value="@p.Title" /><input type="hidden" name="url" value="/@p.Slug" />
-                            <button class="chip">+ @p.Title</button>
+                            <button class="chip"><svg class="ic"><use href="#i-plus" /></svg>@p.Title</button>
                         </form>
                     }
                     @foreach (var c in categories)
                     {
                         <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="inline">
                             <input type="hidden" name="location" value="@location" /><input type="hidden" name="label" value="@c.Name" /><input type="hidden" name="url" value="/category/@c.Slug" />
-                            <button class="chip">+ @c.Name</button>
+                            <button class="chip"><svg class="ic"><use href="#i-plus" /></svg>@c.Name</button>
                         </form>
                     }
                 </div>
             </section>
         }
+        <section class="panel">
+            <h2>Add a custom link</h2>
+            <form method="post" asp-antiforgery="true" action="/admin/menus/add">
+                <input type="hidden" name="location" value="@location" />
+                <label for="m-label">Label</label>
+                <input id="m-label" name="label" required maxlength="120" />
+                <label for="m-url">Link</label>
+                <input id="m-url" name="url" required placeholder="/contact or https://example.com" maxlength="500" />
+                <label class="check"><input type="checkbox" name="openInNewTab" value="true" /> Open in a new tab</label>
+                <div class="actions"><button class="btn primary">Add to @names[location].ToLowerInvariant()</button></div>
+            </form>
+        </section>
     </div>
     <section class="panel">
-        <h2>Menu structure</h2>
-        @if (Model.Count == 0) { <p class="muted">This menu is empty.</p> }
+        <h2>@names[location]</h2>
+        @if (Model.Count == 0) { <p class="muted">This menu is empty. Add pages, categories or links on the left.</p> }
         <ol class="menu-items">
             @for (var i = 0; i < Model.Count; i++)
             {
@@ -57,14 +65,14 @@
                 <li>
                     <form method="post" asp-antiforgery="true" action="/admin/menus/update/@m.Id" class="menu-row">
                         <input name="label" value="@m.Label" aria-label="Label" required />
-                        <input name="url" value="@m.Url" aria-label="URL" required />
+                        <input name="url" value="@m.Url" aria-label="Link" required />
                         <label class="check small"><input type="checkbox" name="openInNewTab" value="true" checked="@m.OpenInNewTab" /> New tab</label>
-                        <button class="btn">Save</button>
+                        <button class="btn sm">Save</button>
                     </form>
                     <div class="menu-tools">
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="-1" /><button class="btn icon" disabled="@(i == 0)" aria-label="Move up">↑</button></form>
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="1" /><button class="btn icon" disabled="@(i == Model.Count - 1)" aria-label="Move down">↓</button></form>
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/delete/@m.Id" class="inline"><button class="btn icon danger" aria-label="Remove">✕</button></form>
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="-1" /><button class="btn icon quiet" disabled="@(i == 0)" aria-label="Move @m.Label up"><svg class="ic"><use href="#i-up" /></svg></button></form>
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="1" /><button class="btn icon quiet" disabled="@(i == Model.Count - 1)" aria-label="Move @m.Label down"><svg class="ic"><use href="#i-down" /></svg></button></form>
+                        <form method="post" asp-antiforgery="true" action="/admin/menus/delete/@m.Id" class="inline"><button class="btn icon quiet danger" aria-label="Remove @m.Label"><svg class="ic"><use href="#i-x" /></svg></button></form>
                     </div>
                 </li>
             }

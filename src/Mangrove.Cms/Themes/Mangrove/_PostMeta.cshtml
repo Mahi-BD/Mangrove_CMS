@@ -1,0 +1,5 @@
+@model Post
+@{
+    var categories = Model.PostTerms.Where(pt => pt.Term?.Type == TermType.Category).Select(pt => pt.Term!).ToList();
+}
+<p class="meta"><time datetime="@Model.PublishedAt?.ToString("O")">@Model.PublishedAt?.ToString("d MMMM yyyy")</time>@if (Model.Author != null){<text> by <a href="/author/@Model.Author.UserName">@Fmt.Name(Model.Author)</a></text>}@if (categories.Count > 0){<text> in </text>@for (var i = 0; i < categories.Count; i++){<a href="/category/@categories[i].Slug">@categories[i].Name</a>@(i < categories.Count - 1 ? ", " : "")}}</p>

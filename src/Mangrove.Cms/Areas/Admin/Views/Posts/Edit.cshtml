@@ -2,18 +2,21 @@
 @{
     var isPage = Model.Type == PostType.Page;
     var noun = isPage ? "page" : "post";
-    ViewData["Title"] = Model.Id == 0 ? $"Add new {noun}" : $"Edit {noun}";
+    ViewData["Title"] = Model.Id == 0 ? $"New {noun}" : $"Edit {noun}";
     ViewData["PostType"] = Model.Type.ToString();
     var categories = (List<Term>)ViewBag.Categories;
     var pages = (List<Post>)ViewBag.Pages;
     var featured = ViewBag.Featured as Media;
+    var isLive = Model.Status == PostStatus.Published;
 }
 <div class="page-head">
     <h1>@ViewData["Title"]</h1>
     @if (Model.Id != 0)
     {
-        <a class="btn" href="/admin/posts/create?type=@Model.Type">Add new</a>
-        <a class="btn" href="/@Model.Slug" target="_blank">@(Model.Status == PostStatus.Published ? "View" : "Preview") ↗</a>
+        <span class="status status-@Model.Status.ToString().ToLowerInvariant()">@Model.Status</span>
+        <div class="head-actions">
+            <a class="btn" href="/@Model.Slug" target="_blank">@(isLive ? "View" : "Preview") <svg class="ic"><use href="#i-external" /></svg></a>
+        </div>
     }
 </div>
 
@@ -23,74 +26,76 @@
     <div asp-validation-summary="ModelOnly" class="errors"></div>
 
     <div class="editor-main">
-        <input asp-for="Title" class="title-input" placeholder="Add title" autofocus="@(Model.Id == 0)" />
-        <span asp-validation-for="Title" class="field-error"></span>
-        <div class="slug-row">
-            <span class="muted">Permalink: /</span>
-            <input asp-for="Slug" placeholder="generated-from-title" aria-label="Slug" />
-        </div>
+        <div class="sheet md-editor" data-preview-url="/admin/posts/preview">
+            <label for="Title" class="sr-only">Title</label>
+            <input asp-for="Title" class="title-input" placeholder="Title" autofocus="@(Model.Id == 0)" autocomplete="off" />
+            <span asp-validation-for="Title" class="field-error" style="padding:0 2rem"></span>
+            <div class="slug-row">
+                <label for="Slug" class="sr-only">Web address</label>
+                <span>@(Context.Request.Host)/</span>
+                <input asp-for="Slug" placeholder="made-from-the-title" />
+            </div>
 
-        <div class="md-editor" data-preview-url="/admin/posts/preview">
             <div class="md-toolbar" role="toolbar" aria-label="Formatting">
                 <button type="button" data-md="bold" title="Bold (Ctrl+B)"><b>B</b></button>
                 <button type="button" data-md="italic" title="Italic (Ctrl+I)"><i>I</i></button>
-                <button type="button" data-md="h2" title="Heading">H2</button>
-                <button type="button" data-md="h3" title="Sub-heading">H3</button>
                 <button type="button" data-md="link" title="Link (Ctrl+K)">Link</button>
-                <button type="button" data-md="quote" title="Quote">❝</button>
-                <button type="button" data-md="ul" title="Bulleted list">• List</button>
-                <button type="button" data-md="ol" title="Numbered list">1. List</button>
-                <button type="button" data-md="code" title="Code">&lt;/&gt;</button>
-                <button type="button" data-md="image" title="Insert media">Media</button>
+                <span class="sep"></span>
+                <button type="button" data-md="h2" title="Heading">H2</button>
+                <button type="button" data-md="h3" title="Subheading">H3</button>
+                <button type="button" data-md="quote" title="Quote">Quote</button>
+                <button type="button" data-md="ul" title="Bulleted list">List</button>
+                <button type="button" data-md="ol" title="Numbered list">1. 2. 3.</button>
+                <button type="button" data-md="code" title="Code">Code</button>
+                <span class="sep"></span>
+                <button type="button" data-md="image" title="Insert an image or file">Image</button>
                 <span class="spacer"></span>
-                <button type="button" class="tab active" data-tab="write">Write</button>
-                <button type="button" class="tab" data-tab="preview">Preview</button>
+                <span class="seg">
+                    <button type="button" class="tab active" data-tab="write">Write</button>
+                    <button type="button" class="tab" data-tab="preview">Preview</button>
+                </span>
             </div>
-            <textarea asp-for="Content" rows="22" class="md-input" placeholder="Start writing… Markdown and HTML both work."></textarea>
+            <label for="Content" class="sr-only">Content</label>
+            <textarea asp-for="Content" rows="22" class="md-input" placeholder="Start writing. Markdown works: **bold**, ## heading, - list. You can also paste or drop images here."></textarea>
             <div class="md-preview entry-content" hidden></div>
         </div>
 
         <details class="panel" open="@(!string.IsNullOrEmpty(Model.Excerpt) || !string.IsNullOrEmpty(Model.MetaDescription))">
-            <summary>Excerpt &amp; SEO</summary>
-            <label asp-for="Excerpt"></label>
-            <textarea asp-for="Excerpt" rows="3" placeholder="Optional summary shown in listings and feeds"></textarea>
-            <label asp-for="MetaDescription"></label>
-            <input asp-for="MetaDescription" placeholder="Shown by search engines (≈155 characters)" />
+            <summary>Summary and search appearance</summary>
+            <label asp-for="Excerpt">Summary</label>
+            <textarea asp-for="Excerpt" rows="3"></textarea>
+            <span class="hint">Shown in post lists and feeds. If left empty, the opening lines are used.</span>
+            <label asp-for="MetaDescription">Search description</label>
+            <input asp-for="MetaDescription" maxlength="300" />
+            <span class="hint">What search engines show under the title. About 155 characters works best.</span>
         </details>
     </div>
 
     <div class="editor-side">
         <section class="panel">
-            <h2>Publish</h2>
-            <label asp-for="Status"></label>
+            <h2>Publishing</h2>
+            <label asp-for="Status">Status</label>
             <select asp-for="Status" id="status-select">
                 <option value="Draft">Draft</option>
                 <option value="Published">Published</option>
                 <option value="Scheduled">Scheduled</option>
             </select>
-            <label asp-for="PublishedAt"></label>
+            <label asp-for="PublishedAt">Publish date (UTC)</label>
             <input asp-for="PublishedAt" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" />
             <span asp-validation-for="PublishedAt" class="field-error"></span>
-            <small class="muted">Leave empty to use “now” when publishing.</small>
-            @if (!isPage)
+            <span class="hint">Leave empty to publish now. Pick a future date with “Scheduled”.</span>
+            <label class="check" style="margin-top:.9rem"><input asp-for="AllowComments" /> Allow comments</label>
+            @if (!isPage && User.AtLeast(UserRole.Editor))
             {
-                <label class="check"><input asp-for="AllowComments" /> Allow comments</label>
-                @if (User.AtLeast(UserRole.Editor))
-                {
-                    <label class="check"><input asp-for="IsSticky" /> Stick to the top</label>
-                }
+                <label class="check"><input asp-for="IsSticky" /> Pin to the top of the blog</label>
             }
-            else
-            {
-                <label class="check"><input asp-for="AllowComments" /> Allow comments</label>
-            }
-            <div class="actions">
-                <button type="submit" class="btn" name="saveDraft" value="1" data-status="Draft">Save draft</button>
-                <button type="submit" class="btn primary">@(Model.Status == PostStatus.Published ? "Update" : "Save")</button>
+            <div class="publish-actions">
+                @if (!isLive) { <button type="submit" class="btn" data-status="Draft">Save draft</button> }
+                <button type="submit" class="btn primary" data-primary>@(isLive ? "Update" : "Save")</button>
             </div>
             @if (Model.Id != 0)
             {
-                <button type="submit" form="trash-form" class="linklike danger">Move to trash</button>
+                <button type="submit" form="trash-form" class="linklike danger trash-link">Move to trash</button>
             }
         </section>
 
@@ -110,25 +115,25 @@
                 }
             </section>
             <section class="panel">
-                <h2>Tags</h2>
-                <input asp-for="Tags" placeholder="news, release, tips" />
-                <small class="muted">Separate tags with commas.</small>
+                <h2><label for="Tags" style="margin:0">Tags</label></h2>
+                <input asp-for="Tags" placeholder="travel, food, rajshahi" />
+                <span class="hint">Separate tags with commas.</span>
             </section>
         }
         else
         {
             <section class="panel">
-                <h2>Page attributes</h2>
-                <label asp-for="ParentId"></label>
+                <h2>Page settings</h2>
+                <label asp-for="ParentId">Parent page</label>
                 <select asp-for="ParentId">
-                    <option value="">(no parent)</option>
+                    <option value="">None (top level)</option>
                     @foreach (var p in pages)
                     {
                         <option value="@p.Id">@p.Title</option>
                     }
                 </select>
                 <span asp-validation-for="ParentId" class="field-error"></span>
-                <label asp-for="MenuOrder"></label>
+                <label asp-for="MenuOrder">Order</label>
                 <input asp-for="MenuOrder" type="number" />
             </section>
         }
@@ -142,24 +147,33 @@
                     <img src="@featured.Url" alt="" />
                 }
             </div>
-            <button type="button" class="btn" data-pick-featured>Choose image</button>
-            <button type="button" class="linklike danger" data-clear-featured hidden="@(featured == null)">Remove</button>
+            <button type="button" class="btn sm" data-pick-featured>@(featured == null ? "Choose image" : "Replace image")</button>
+            <button type="button" class="btn sm quiet danger" data-clear-featured hidden="@(featured == null)">Remove</button>
         </section>
     </div>
 </form>
 
 @if (Model.Id != 0)
 {
-    <form id="trash-form" method="post" asp-antiforgery="true" action="/admin/posts/trash/@Model.Id" data-confirm="Move this @noun to the trash?"></form>
+    <form id="trash-form" method="post" asp-antiforgery="true" action="/admin/posts/trash/@Model.Id" data-confirm="Move this @noun to the trash? You can restore it later."></form>
 }
 
 <partial name="_MediaPicker" />
 
 @section Scripts {
     <script>
-        // "Save draft" forces status=Draft regardless of the dropdown.
-        document.querySelector('[data-status="Draft"]').addEventListener('click', function () {
+        // "Save draft" always saves as a draft, whatever the dropdown says.
+        var draftBtn = document.querySelector('[data-status="Draft"]');
+        if (draftBtn) draftBtn.addEventListener('click', function () {
             document.getElementById('status-select').value = 'Draft';
         });
+        // Name the primary button after what it will do.
+        var sel = document.getElementById('status-select'), primary = document.querySelector('[data-primary]');
+        var live = @(isLive ? "true" : "false");
+        function label() {
+            primary.textContent = sel.value === 'Published' ? (live ? 'Update' : 'Publish')
+                                : sel.value === 'Scheduled' ? 'Schedule' : (live ? 'Update' : 'Save');
+        }
+        sel.addEventListener('change', label); label();
     </script>
 }

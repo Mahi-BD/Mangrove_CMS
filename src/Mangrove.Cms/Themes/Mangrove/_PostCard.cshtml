@@ -1,34 +1,22 @@
 @model Post
 @inject ContentRenderer Renderer
 @{
-    var author = Model.Author;
-    var authorName = author == null ? "" : (string.IsNullOrWhiteSpace(author.DisplayName) ? author.UserName : author.DisplayName);
-    var excerpt = string.IsNullOrWhiteSpace(Model.Excerpt) ? Renderer.PlainText(Model.Content, 280) : Model.Excerpt;
-    var categories = Model.PostTerms.Where(pt => pt.Term?.Type == TermType.Category).Select(pt => pt.Term!).ToList();
+    var excerpt = string.IsNullOrWhiteSpace(Model.Excerpt) ? Renderer.PlainText(Model.Content, 240) : Model.Excerpt;
+    var category = Model.PostTerms.FirstOrDefault(pt => pt.Term?.Type == TermType.Category)?.Term;
 }
-<article class="card @(Model.IsSticky ? "sticky" : null)">
+<article class="entry-row">
+    <time class="row-date" datetime="@Model.PublishedAt?.ToString("O")">@Model.PublishedAt?.ToString("d MMM yyyy")</time>
+    <div class="row-body">
+        <h2 class="row-title"><a href="/@Model.Slug">@Model.Title</a></h2>
+        <p class="row-excerpt">@excerpt</p>
+        <p class="row-meta">
+            @if (Model.IsSticky) { <span class="pinned">Pinned</span> }
+            @if (category != null) { <a href="/category/@category.Slug">@category.Name</a> }
+            @if (Model.Author != null) { <span>by @Fmt.Name(Model.Author)</span> }
+        </p>
+    </div>
     @if (Model.FeaturedMedia is { IsImage: true } img)
     {
-        <a href="/@Model.Slug" class="card-image"><img src="@img.Url" alt="@img.AltText" loading="lazy" /></a>
+        <a class="row-thumb" href="/@Model.Slug" tabindex="-1" aria-hidden="true"><img src="@img.Url" alt="" loading="lazy" /></a>
     }
-    <div class="card-body">
-        @if (Model.IsSticky)
-        {
-            <span class="badge">Featured</span>
-        }
-        <h2 class="card-title"><a href="/@Model.Slug">@Model.Title</a></h2>
-        <p class="meta">
-            <time datetime="@Model.PublishedAt?.ToString("O")">@Model.PublishedAt?.ToString("MMMM d, yyyy")</time>
-            @if (author != null)
-            {
-                <text> · by <a href="/author/@author.UserName">@authorName</a></text>
-            }
-            @foreach (var c in categories)
-            {
-                <text> · </text><a href="/category/@c.Slug">@c.Name</a>
-            }
-        </p>
-        <p class="excerpt">@excerpt</p>
-        <a class="more" href="/@Model.Slug">Continue reading<span class="sr-only"> “@Model.Title”</span> →</a>
-    </div>
 </article>

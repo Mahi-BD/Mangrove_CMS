@@ -1,28 +1,50 @@
-/* Minimal — loads on top of the Mangrove stylesheet and only changes what differs. */
+/* Minimal: loads on top of the Mangrove stylesheet.
+   One column, one typeface, no ornament. Black ink on white, tannin for links. */
 :root {
-    --bg: #fffefb;
-    --surface: #fffefb;
-    --brand: #1f2937;
-    --brand-strong: #000;
-    --header: transparent;
-    --header-text: #1f2937;
+    --paper: #ffffff;
+    --surface: #ffffff;
+    --ink: #111816;
+    --text: #1f2624;
+    --muted: #6b7471;
+    --line: #e6e8e6;
+    --brackish: #8a5517;
+    --wrap: 44rem;
+    --measure: 44rem;
 }
 @media (prefers-color-scheme: dark) {
-    :root { --bg: #111; --surface: #111; --brand: #e5e5e5; --brand-strong: #fff; --header-text: #e5e5e5; }
+    :root { --paper: #121413; --surface: #121413; --ink: #f1f3f2; --text: #d9dddb; --muted: #8e9794; --line: #2a2e2c; --brackish: #e0a65a; }
 }
-body.theme-minimal { font-family: var(--serif); font-size: 19px; }
-.wrap.narrow { max-width: 700px; }
-.theme-minimal .site-header { border-bottom: 1px solid var(--border); padding: 2.5rem 0 1.5rem; text-align: center; }
-.theme-minimal .site-title { color: var(--text); font-size: 2rem; }
-.theme-minimal .site-title:hover { color: var(--muted); }
-.theme-minimal .site-nav { margin-top: 1rem; }
-.theme-minimal .menu { justify-content: center; }
-.theme-minimal .site-nav .menu a { color: var(--muted); font-family: var(--sans); font-size: .9rem; }
-.theme-minimal .site-nav .menu .current a, .theme-minimal .site-nav .menu a:hover { color: var(--text); border-bottom-color: var(--text); }
-.theme-minimal .content { padding-top: 3rem; padding-bottom: 4rem; }
-.theme-minimal .card { border: 0; border-radius: 0; border-bottom: 1px solid var(--border); background: none; }
-.theme-minimal .card-body { padding: 0 0 2rem; }
-.theme-minimal .card-image { display: none; }
-.theme-minimal .site-footer { text-align: center; }
-.theme-minimal .site-footer .wrap { padding: 2rem 1.25rem; }
-.theme-minimal .site-footer .menu { justify-content: center; margin-bottom: .5rem; }
+body.theme-minimal { font-family: var(--ui); font-size: 1.0625rem; line-height: 1.7; }
+
+.min-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem 2rem; flex-wrap: wrap; padding-top: 3rem; padding-bottom: 3rem; }
+.theme-minimal .site-title { font: 700 1.15rem/1.2 var(--ui); letter-spacing: -.01em; }
+.theme-minimal .site-nav .menu a, .min-search { font-size: .95rem; color: var(--muted); text-decoration: none; }
+.theme-minimal .site-nav .menu a:hover, .theme-minimal .site-nav .menu .current a, .min-search:hover { color: var(--ink); border-bottom-color: transparent; }
+.theme-minimal .site-main { padding-top: 0; }
+
+/* Lists become a quiet index: title, date, nothing else. */
+.theme-minimal .lead { display: block; border: 0; padding-bottom: 2.5rem; }
+.theme-minimal .lead-image, .theme-minimal .row-thumb, .theme-minimal .row-excerpt, .theme-minimal .row-meta, .theme-minimal .section-title { display: none; }
+.theme-minimal .lead-title { font: 700 clamp(2rem, 1.4rem + 2.5vw, 2.8rem)/1.1 var(--ui); letter-spacing: -.035em; }
+.theme-minimal .lead-excerpt { font-family: var(--ui); font-size: 1.1rem; }
+.theme-minimal .entry-row { display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: baseline; gap: 2rem; padding: .9rem 0; }
+.theme-minimal .row-date { font-size: .85rem; white-space: nowrap; padding: 0; }
+.theme-minimal .row-title { font: 500 1.08rem/1.4 var(--ui); margin: 0; letter-spacing: 0; max-width: none; }
+.theme-minimal .archive-head h1 { font: 700 2rem/1.15 var(--ui); letter-spacing: -.03em; }
+
+/* Reading */
+.theme-minimal .entry, .theme-minimal .comments, .theme-minimal .post-nav { max-width: none; }
+.theme-minimal .entry-head h1 { font: 700 clamp(2rem, 1.4rem + 2.6vw, 2.9rem)/1.1 var(--ui); letter-spacing: -.035em; }
+.theme-minimal .entry-figure { margin: 0 0 2.5rem; }
+.theme-minimal .entry-content { font-family: var(--ui); font-size: 1.08rem; }
+.theme-minimal .entry-content h2, .theme-minimal .entry-content h3 { font-family: var(--ui); letter-spacing: -.02em; }
+.theme-minimal .entry-content blockquote { font-style: normal; font-size: 1.15rem; border-left-color: var(--ink); }
+.theme-minimal .post-nav a, .theme-minimal .comments h2, .theme-minimal .comments h3 { font-family: var(--ui); }
+.theme-minimal .comment-body, .theme-minimal textarea { font-family: var(--ui); }
+.theme-minimal .respond { border: 0; padding: 0; background: none; }
+.theme-minimal .button, .theme-minimal button[type=submit]:not(.linklike) { border-radius: 999px; }
+
+.min-foot { padding-top: 2rem; padding-bottom: 3rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
+.min-foot p { margin: .3rem 0; }
+.min-foot a { color: var(--muted); margin-right: 1rem; }
+.min-foot .menu { margin-bottom: .6rem; }

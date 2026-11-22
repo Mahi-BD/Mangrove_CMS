@@ -1,11 +1,11 @@
 @{ ViewData["Title"] = "Page not found"; }
-<section class="notfound">
-    <h1>Page not found</h1>
-    <p>Sorry, nothing lives at this address. Maybe a search helps?</p>
-    <form action="/search" method="get" role="search" class="search-form big">
+<section class="archive-head notfound">
+    <h1>This page has drifted off</h1>
+    <p>There's nothing at this address. It may have moved, or the link may be mistyped. Try searching instead.</p>
+    <form action="/search" method="get" role="search" class="search-big">
         <label for="q404" class="sr-only">Search</label>
-        <input id="q404" type="search" name="q" placeholder="Search posts…" />
-        <button type="submit">Search</button>
+        <input id="q404" type="search" name="q" placeholder="Search posts" />
+        <button type="submit" class="button">Search</button>
     </form>
-    <p><a href="/">← Back to the homepage</a></p>
+    <p><a href="/">Go to the home page</a></p>
 </section>

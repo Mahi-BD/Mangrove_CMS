@@ -1,0 +1,35 @@
+@inject SettingsService Settings
+@inject PostQueryService Posts
+@{
+    var site = await Settings.AllAsync();
+    var recent = await Posts.RecentAsync(5);
+    var categories = await Posts.TermsWithCountsAsync(TermType.Category);
+}
+<footer class="site-footer">
+    <div class="wrap footer-grid">
+        <section class="footer-about">
+            <a class="footer-title" href="/">@site[SettingKeys.SiteTitle]</a>
+            @if (!string.IsNullOrEmpty(site[SettingKeys.Tagline])) { <p>@site[SettingKeys.Tagline]</p> }
+            <p><a href="/feed">Follow by RSS</a></p>
+        </section>
+        @if (recent.Count > 0)
+        {
+            <section>
+                <h2>Recent writing</h2>
+                <ul>@foreach (var p in recent) { <li><a href="/@p.Slug">@p.Title</a></li> }</ul>
+            </section>
+        }
+        @if (categories.Count > 0)
+        {
+            <section>
+                <h2>Topics</h2>
+                <ul>@foreach (var c in categories) { <li><a href="/category/@c.Slug">@c.Name</a></li> }</ul>
+            </section>
+        }
+    </div>
+    <div class="wrap footer-base">
+        @await Component.InvokeAsync("Menu", new { location = "footer" })
+        <p>@site[SettingKeys.FooterText]</p>
+        @if (User.Identity?.IsAuthenticated != true) { <a href="/account/login">Log in</a> }
+    </div>
+</footer>

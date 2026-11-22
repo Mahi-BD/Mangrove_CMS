@@ -1,6 +1,6 @@
 {
   "name": "Minimal",
-  "description": "A single-column, typography-first theme. Overrides only the layout and stylesheet; everything else falls back to Mangrove.",
+  "description": "One column and one typeface. Lists become a plain index of titles and dates. Overrides only the layout and stylesheet.",
   "author": "Mangrove CMS contributors",
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

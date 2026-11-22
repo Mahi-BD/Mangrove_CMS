@@ -227,6 +227,8 @@ public class DashboardViewModel
     public int PendingComments { get; set; }
     public int Users { get; set; }
     public int MediaFiles { get; set; }
-    public List<Post> RecentPosts { get; set; } = new();
-    public List<Comment> RecentComments { get; set; } = new();
+    public int Scheduled { get; set; }
+    public List<Post> RecentDrafts { get; set; } = new();
+    public List<Post> RecentPublished { get; set; } = new();
+    public List<Comment> PendingQueue { get; set; } = new();
 }

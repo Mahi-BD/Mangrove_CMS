@@ -1,23 +1,25 @@
 @model PagedResult<Media>
-@{ ViewData["Title"] = "Media"; var q = ViewBag.Q as string; }
+@{ ViewData["Title"] = "Media"; var q = ViewBag.Q as string; Func<int, string> pageUrl = n => $"/admin/media?page={n}{(string.IsNullOrEmpty(q) ? "" : "&q=" + Uri.EscapeDataString(q))}"; }
 <div class="page-head">
-    <h1>Media library</h1>
+    <h1>Media</h1>
+    <form method="get" class="search head-actions" role="search">
+        <svg class="ic"><use href="#i-search" /></svg>
+        <input type="search" name="q" value="@q" placeholder="Search by file name" aria-label="Search media" />
+    </form>
 </div>
 
 <form method="post" asp-antiforgery="true" action="/admin/media/upload" enctype="multipart/form-data" class="dropzone" data-dropzone>
-    <p><strong>Drop files here</strong> or</p>
-    <label class="btn primary">Select files<input type="file" name="files" multiple hidden accept="@MediaService.AcceptList" onchange="this.form.submit()" /></label>
-    <p class="muted small">Images, PDFs, office documents, audio and video · up to @(MediaService.MaxBytes / 1024 / 1024) MB each</p>
-</form>
-
-<form method="get" class="search toolbar">
-    <input type="search" name="q" value="@q" placeholder="Search by file name…" aria-label="Search" />
-    <button class="btn">Search</button>
+    <svg class="ic"><use href="#i-upload" /></svg>
+    <div class="grow">
+        <p><strong>Drop files here to upload</strong></p>
+        <p class="small muted">Images, PDFs, Office documents, audio and video, up to @(MediaService.MaxBytes / 1024 / 1024) MB each.</p>
+    </div>
+    <label class="btn primary">Choose files<input type="file" name="files" multiple hidden accept="@MediaService.AcceptList" onchange="this.form.submit()" /></label>
 </form>
 
 @if (Model.Items.Count == 0)
 {
-    <p class="muted">No files yet.</p>
+    <p class="empty-state">@(string.IsNullOrEmpty(q) ? "Your media library is empty. Uploaded images and files will appear here." : $"No files match “{q}”.")</p>
 }
 <div class="media-grid">
     @foreach (var m in Model.Items)
@@ -26,22 +28,28 @@
             <summary>
                 @if (m.IsImage) { <img src="@m.Url" alt="@m.AltText" loading="lazy" /> }
                 else { <span class="file-icon">@System.IO.Path.GetExtension(m.FileName).TrimStart('.').ToUpperInvariant()</span> }
-                <span class="media-name">@m.FileName</span>
+                <span class="media-name" title="@m.FileName">@m.FileName</span>
             </summary>
             <div class="media-detail">
-                <p class="small muted">@m.ContentType · @(m.SizeBytes / 1024) KB · @m.UploadedAt.ToString("yyyy-MM-dd")</p>
-                <label>URL <input readonly value="@m.Url" onclick="this.select()" /></label>
-                <form method="post" asp-antiforgery="true" action="/admin/media/update/@m.Id" class="stack">
-                    <label>Alt text <input name="altText" value="@m.AltText" /></label>
-                    <label>Caption <input name="caption" value="@m.Caption" /></label>
-                    <button class="btn">Save</button>
-                </form>
-                <form method="post" asp-antiforgery="true" action="/admin/media/delete/@m.Id" data-confirm="Delete @m.FileName? Posts using it will show a broken image.">
-                    <button class="linklike danger">Delete permanently</button>
+                <h2 style="margin-bottom:.2rem">@m.FileName</h2>
+                <p class="small muted">@Fmt.Size(m.SizeBytes), uploaded @Fmt.Ago(m.UploadedAt)</p>
+                <label for="url-@m.Id">File address</label>
+                <input id="url-@m.Id" readonly value="@m.Url" onclick="this.select()" />
+                <form method="post" asp-antiforgery="true" action="/admin/media/update/@m.Id">
+                    <label for="alt-@m.Id">Alt text</label>
+                    <input id="alt-@m.Id" name="altText" value="@m.AltText" />
+                    <span class="hint">Describes the image for people using screen readers.</span>
+                    <label for="cap-@m.Id">Caption</label>
+                    <input id="cap-@m.Id" name="caption" value="@m.Caption" />
+                    <div class="actions">
+                        <button class="btn">Save details</button>
+                        <a class="btn quiet" href="@m.Url" target="_blank">Open file</a>
+                        <span class="spacer"></span>
+                        <button class="btn quiet danger" formaction="/admin/media/delete/@m.Id" data-confirm-click="Delete @m.FileName? Posts that use it will show a broken image.">Delete</button>
+                    </div>
                 </form>
             </div>
         </details>
     }
 </div>
-@{ Func<int, string> pageUrl = n => $"/admin/media?page={n}{(string.IsNullOrEmpty(q) ? "" : "&q=" + Uri.EscapeDataString(q))}"; }
 <partial name="_Pager" model="(Model.Page, Model.TotalPages, pageUrl)" />

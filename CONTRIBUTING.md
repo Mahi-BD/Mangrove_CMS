@@ -25,5 +25,5 @@ Open http://localhost:5080 and finish the setup wizard. The SQLite database is c
 ## Writing a theme
 
 Copy `Themes/Minimal` to start. A theme only needs a `theme.json` plus the views it overrides
-(`_Layout`, `Index`, `Single`, `_PostCard`, `_Sidebar`, `NotFound`, `Account/Login`, …).
+(`_Layout`, `Index`, `Single`, `_PostCard`, `_PostMeta`, `_Footer`, `NotFound`, …).
 Static files go in `wwwroot/themes/<name>/`. Anything you don't override falls back to the default *Mangrove* theme.

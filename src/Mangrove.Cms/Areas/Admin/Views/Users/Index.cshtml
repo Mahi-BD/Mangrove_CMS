@@ -6,40 +6,49 @@
 }
 <div class="page-head">
     <h1>Users</h1>
-    <a class="btn primary" href="/admin/users/create">Add new</a>
+    <div class="head-actions"><a class="btn primary" href="/admin/users/create"><svg class="ic"><use href="#i-plus" /></svg> Add user</a></div>
 </div>
-<nav class="filters toolbar">
-    <a class="@(role == null ? "active" : null)" href="/admin/users">All</a>
-    @foreach (var r in Enum.GetValues<UserRole>().Reverse())
-    {
-        <a class="@(role == r ? "active" : null)" href="/admin/users?role=@r">@r</a>
-    }
-</nav>
+<div class="toolbar">
+    <nav class="filters" aria-label="Filter by role">
+        <a class="@(role == null ? "active" : null)" href="/admin/users">Everyone</a>
+        @foreach (var r in Enum.GetValues<UserRole>().Reverse())
+        {
+            <a class="@(role == r ? "active" : null)" href="/admin/users?role=@r">@(r)s</a>
+        }
+    </nav>
+</div>
 <div class="table-wrap">
 <table class="table">
-    <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Posts</th><th>Last login</th></tr></thead>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th class="right">Posts</th><th>Last signed in</th></tr></thead>
     <tbody>
+        @if (Model.Count == 0) { <tr class="empty"><td colspan="5">No users with this role.</td></tr> }
         @foreach (var u in Model)
         {
             <tr class="@(u.IsActive ? null : "inactive")">
                 <td>
-                    <a class="row-title" href="/admin/users/edit/@u.Id">@u.UserName</a>
-                    @if (!u.IsActive) { <span class="status">Disabled</span> }
+                    <div style="display:flex;gap:.7rem;align-items:center">
+                        <span class="avatar" aria-hidden="true">@Fmt.Name(u)[..1]</span>
+                        <div>
+                            <a class="row-title" href="/admin/users/edit/@u.Id">@Fmt.Name(u)</a>
+                            @if (u.Id == User.UserId()) { <span class="flag">You</span> }
+                            @if (!u.IsActive) { <span class="flag">Disabled</span> }
+                            <div class="small muted">@u.UserName</div>
+                        </div>
+                    </div>
                     <div class="row-actions">
                         <a href="/admin/users/edit/@u.Id">Edit</a>
                         @if (u.Id != User.UserId())
                         {
-                            <form method="post" asp-antiforgery="true" action="/admin/users/delete/@u.Id" class="inline" data-confirm="Delete @u.UserName? Their posts will be assigned to you.">
+                            <form method="post" asp-antiforgery="true" action="/admin/users/delete/@u.Id" class="inline" data-confirm="Delete @u.UserName? Their posts will be moved to you.">
                                 <button class="linklike danger">Delete</button>
                             </form>
                         }
                     </div>
                 </td>
-                <td>@u.DisplayName</td>
                 <td>@u.Email</td>
                 <td>@u.Role</td>
-                <td>@(postCounts.TryGetValue(u.Id, out var n) ? n : 0)</td>
-                <td><small>@(u.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "never")</small></td>
+                <td class="right num">@(postCounts.TryGetValue(u.Id, out var n) ? n : 0)</td>
+                <td class="when">@(u.LastLoginAt.HasValue ? Fmt.Ago(u.LastLoginAt.Value) : "Never")</td>
             </tr>
         }
     </tbody>

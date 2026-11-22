@@ -1,0 +1,27 @@
+@inject SettingsService Settings
+@{
+    var installed = await Settings.GetBoolAsync(SettingKeys.Installed);
+    var siteTitle = installed ? await Settings.GetAsync(SettingKeys.SiteTitle) : "Mangrove CMS";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>@ViewData["Title"] | @siteTitle</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/admin.css" asp-append-version="true" />
+</head>
+<body class="setup-body">
+    <aside class="setup-art">
+        <a class="brand" href="/" style="text-decoration:none"><img src="/favicon.svg" alt="" width="36" height="36" /> @siteTitle</a>
+        <blockquote>Where the river meets the sea, the roots hold the ground together.</blockquote>
+        <small>@(installed ? "Powered by Mangrove CMS" : "Open-source publishing on ASP.NET Core and SQLite")</small>
+        <partial name="_Roots" />
+    </aside>
+    <main class="setup-card">
+        @RenderBody()
+    </main>
+</body>
+</html>
