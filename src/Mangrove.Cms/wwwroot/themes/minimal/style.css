@@ -52,3 +52,5 @@ body.theme-minimal { font-family: var(--ui); font-size: 1.0625rem; line-height: 
 .theme-minimal .notice-title, .theme-minimal .notice-date b, .theme-minimal .downloads h2 { font-family: var(--ui); }
 .theme-minimal .data-table th { background: none; border-bottom: 2px solid var(--ink); }
 .theme-minimal .data-scroll { border: 0; }
+.theme-minimal .sub-menu { border-radius: 4px; box-shadow: 0 10px 28px rgba(0, 0, 0, .1); }
+.theme-minimal .site-nav .sub-menu a { color: var(--text); font-size: .92rem; }

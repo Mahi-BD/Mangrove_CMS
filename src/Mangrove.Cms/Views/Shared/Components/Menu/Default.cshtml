@@ -1,16 +1,64 @@
-@model List<MenuItem>
+@model List<MenuNode>
 @{
-    var path = Context.Request.Path.Value ?? "/";
+    var location = ViewData["Location"] as string ?? "primary";
 }
 @if (Model.Count > 0)
 {
-    <ul class="menu menu-@ViewData["Location"]">
-        @foreach (var item in Model)
-        {
-            var current = item.Url == path || (item.Url != "/" && path.StartsWith(item.Url.TrimEnd('/') + "/"));
-            <li class="@(current ? "current" : null)">
-                <a href="@item.Url" target="@(item.OpenInNewTab ? "_blank" : null)" rel="@(item.OpenInNewTab ? "noopener" : null)" aria-current="@(current ? "page" : null)">@item.Label</a>
-            </li>
-        }
+    <ul class="menu menu-@location">
+        @foreach (var node in Model) { RenderNode(node, 0); }
     </ul>
+    @if (location == "primary" && Model.Any(n => n.Children.Count > 0))
+    {
+        <script>
+            // Sub-menus: open on hover/focus with CSS; the toggle button opens them on touch screens
+            // and with the keyboard, and Escape closes them.
+            (function () {
+                var menu = document.currentScript && document.currentScript.previousElementSibling;
+                if (!menu) return;
+                menu.addEventListener('click', function (e) {
+                    var b = e.target.closest('.sub-toggle');
+                    if (!b) return;
+                    var li = b.parentElement, open = !li.classList.contains('open');
+                    [].forEach.call(li.parentElement.children, function (s) { if (s !== li) { s.classList.remove('open'); var t = s.querySelector(':scope > .sub-toggle'); if (t) t.setAttribute('aria-expanded', 'false'); } });
+                    li.classList.toggle('open', open);
+                    b.setAttribute('aria-expanded', String(open));
+                });
+                document.addEventListener('click', function (e) {
+                    if (!menu.contains(e.target)) menu.querySelectorAll('li.open').forEach(function (li) { li.classList.remove('open'); });
+                });
+                menu.addEventListener('keydown', function (e) {
+                    if (e.key !== 'Escape') return;
+                    var li = e.target.closest('li.open') || e.target.closest('li.has-sub');
+                    if (li) { li.classList.remove('open'); var t = li.querySelector(':scope > .sub-toggle'); if (t) { t.setAttribute('aria-expanded', 'false'); t.focus(); } }
+                });
+            })();
+        </script>
+    }
+}
+
+@functions {
+    private string CurrentPath => Context.Request.Path.Value ?? "/";
+
+    private bool IsCurrent(MenuNode n) =>
+        n.Url == CurrentPath || (n.Url != "/" && n.Url.StartsWith('/') && CurrentPath.StartsWith(n.Url.TrimEnd('/') + "/"));
+
+    private bool HasCurrent(MenuNode n) => IsCurrent(n) || n.Children.Any(HasCurrent);
+
+    void RenderNode(MenuNode node, int depth)
+    {
+        var current = IsCurrent(node);
+        var branch = !current && HasCurrent(node);
+        var hasSub = node.Children.Count > 0;
+        var cls = string.Join(" ", new[] { current ? "current" : null, branch ? "current-branch" : null, hasSub ? "has-sub" : null }.Where(c => c != null));
+        <li class="@(cls.Length > 0 ? cls : null)">
+            <a href="@node.Url" target="@(node.Item.OpenInNewTab ? "_blank" : null)" rel="@(node.Item.OpenInNewTab ? "noopener" : null)" aria-current="@(current ? "page" : null)">@node.Item.Label</a>
+            @if (hasSub)
+            {
+                <button type="button" class="sub-toggle" aria-expanded="false" aria-label="Show the @node.Item.Label menu"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <ul class="sub-menu">
+                    @foreach (var child in node.Children) { RenderNode(child, depth + 1); }
+                </ul>
+            }
+        </li>
+    }
 }

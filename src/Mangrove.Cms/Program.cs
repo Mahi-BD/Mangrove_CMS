@@ -77,6 +77,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PostQueryService>();
 builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<NoticeService>();
+builder.Services.AddScoped<MenuService>();
 
 // Emit Bangla, Arabic, CJK… as real characters instead of &#x…; entities.
 builder.Services.AddWebEncoders(o => o.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));

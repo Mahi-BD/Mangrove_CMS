@@ -225,6 +225,24 @@ public class MenuItem
     public int? ParentId { get; set; }
     public int SortOrder { get; set; }
     public bool OpenInNewTab { get; set; }
+
+    /// <summary>What the item points to: custom, page, post, category or tag.
+    /// For anything but custom, the URL is worked out from LinkId when the menu is shown,
+    /// so renaming a page's address doesn't break the menu.</summary>
+    [MaxLength(20)]
+    public string LinkType { get; set; } = MenuLinkTypes.Custom;
+
+    public int? LinkId { get; set; }
+}
+
+public static class MenuLinkTypes
+{
+    public const string Custom = "custom";
+    public const string Page = "page";
+    public const string Post = "post";
+    public const string Category = "category";
+    public const string Tag = "tag";
+    public static readonly string[] All = { Custom, Page, Post, Category, Tag };
 }
 
 public class Setting

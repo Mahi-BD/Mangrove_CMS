@@ -126,86 +126,40 @@ public class CommentsController : AdminController
 [Authorize(Policy = Policies.Editor)]
 public class MenusController : AdminController
 {
-    public static readonly string[] Locations = { "primary", "footer" };
     private readonly CmsDbContext _db;
-    public MenusController(CmsDbContext db) => _db = db;
+    private readonly MenuService _menus;
+
+    public MenusController(CmsDbContext db, MenuService menus)
+    {
+        _db = db;
+        _menus = menus;
+    }
 
     public async Task<IActionResult> Index(string location = "primary")
     {
-        if (!Locations.Contains(location)) location = "primary";
+        if (!MenuService.Locations.Contains(location)) location = "primary";
         ViewBag.Location = location;
+        ViewBag.Items = await _menus.EditListAsync(location);
         ViewBag.Pages = await _db.Posts.AsNoTracking()
-            .Where(p => p.Type == PostType.Page && p.Status == PostStatus.Published).OrderBy(p => p.Title).ToListAsync();
-        ViewBag.Categories = await _db.Terms.AsNoTracking().Where(t => t.Type == TermType.Category).OrderBy(t => t.Name).ToListAsync();
-        var items = await _db.MenuItems.AsNoTracking().Where(m => m.Location == location).OrderBy(m => m.SortOrder).ToListAsync();
-        return View(items);
+            .Where(p => p.Type == PostType.Page && p.Status == PostStatus.Published)
+            .OrderBy(p => p.MenuOrder).ThenBy(p => p.Title).Select(p => new { p.Id, p.Title, p.Slug }).ToListAsync();
+        ViewBag.Posts = await _db.Posts.AsNoTracking()
+            .Where(p => p.Type == PostType.Post && p.Status == PostStatus.Published)
+            .OrderByDescending(p => p.PublishedAt).Take(50).Select(p => new { p.Id, p.Title, p.Slug }).ToListAsync();
+        ViewBag.Categories = await _db.Terms.AsNoTracking().Where(t => t.Type == TermType.Category)
+            .OrderBy(t => t.Name).Select(t => new { t.Id, Title = t.Name, t.Slug }).ToListAsync();
+        ViewBag.Tags = await _db.Terms.AsNoTracking().Where(t => t.Type == TermType.Tag)
+            .OrderBy(t => t.Name).Select(t => new { t.Id, Title = t.Name, t.Slug }).ToListAsync();
+        ViewBag.Counts = await _db.MenuItems.GroupBy(m => m.Location).Select(g => new { g.Key, N = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.N);
+        return View();
     }
 
+    /// <summary>Saves the whole menu from the drag-and-drop editor.</summary>
     [HttpPost]
-    public async Task<IActionResult> Add(string location, string label, string url, bool openInNewTab = false)
+    public async Task<IActionResult> Save([FromBody] MenuSaveModel model)
     {
-        if (!Locations.Contains(location) || string.IsNullOrWhiteSpace(label) || !IsSafeUrl(url))
-        {
-            Flash("Enter a label and a link starting with /, http:// or https://.", "error");
-            return RedirectToAction(nameof(Index), new { location });
-        }
-        var max = await _db.MenuItems.Where(m => m.Location == location).MaxAsync(m => (int?)m.SortOrder) ?? -1;
-        _db.MenuItems.Add(new MenuItem { Location = location, Label = label.Trim(), Url = url.Trim(), OpenInNewTab = openInNewTab, SortOrder = max + 1 });
-        await _db.SaveChangesAsync();
-        Flash($"Added “{label.Trim()}”.");
-        return RedirectToAction(nameof(Index), new { location });
+        var error = await _menus.SaveAsync(model);
+        if (error != null) return BadRequest(new { error });
+        return Json(new { ok = true, items = await _menus.EditListAsync(model.Location) });
     }
-
-    [HttpPost]
-    public async Task<IActionResult> Update(int id, string label, string url, bool openInNewTab = false)
-    {
-        var item = await _db.MenuItems.FindAsync(id);
-        if (item == null) return NotFound();
-        if (string.IsNullOrWhiteSpace(label) || !IsSafeUrl(url))
-        {
-            Flash("Enter a label and a link starting with /, http:// or https://.", "error");
-            return RedirectToAction(nameof(Index), new { location = item.Location });
-        }
-        item.Label = label.Trim();
-        item.Url = url.Trim();
-        item.OpenInNewTab = openInNewTab;
-        await _db.SaveChangesAsync();
-        Flash("Menu item saved.");
-        return RedirectToAction(nameof(Index), new { location = item.Location });
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Move(int id, int direction)
-    {
-        var item = await _db.MenuItems.FindAsync(id);
-        if (item == null) return NotFound();
-        var siblings = await _db.MenuItems.Where(m => m.Location == item.Location).OrderBy(m => m.SortOrder).ToListAsync();
-        var i = siblings.FindIndex(m => m.Id == id);
-        var j = i + Math.Sign(direction);
-        if (j >= 0 && j < siblings.Count)
-        {
-            (siblings[i], siblings[j]) = (siblings[j], siblings[i]);
-            for (var k = 0; k < siblings.Count; k++) siblings[k].SortOrder = k;
-            await _db.SaveChangesAsync();
-        }
-        return RedirectToAction(nameof(Index), new { location = item.Location });
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var item = await _db.MenuItems.FindAsync(id);
-        if (item == null) return NotFound();
-        _db.MenuItems.Remove(item);
-        await _db.SaveChangesAsync();
-        Flash("Menu item removed.");
-        return RedirectToAction(nameof(Index), new { location = item.Location });
-    }
-
-    private static bool IsSafeUrl(string? url) =>
-        !string.IsNullOrWhiteSpace(url) &&
-        (url.StartsWith('/') && !url.StartsWith("//") ||
-         url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-         url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-         url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase));
 }

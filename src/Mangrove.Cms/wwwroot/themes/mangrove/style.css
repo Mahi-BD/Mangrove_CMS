@@ -310,3 +310,37 @@ label small { font-weight: 400; color: var(--muted); }
 .downloads .button { height: 2.4rem; padding: 0 1rem; }
 .back { margin-top: 2.5rem; font: 500 .95rem var(--ui); }
 @media (max-width: 560px) { .downloads li { flex-wrap: wrap; } .dl-name { flex-basis: calc(100% - 4rem); } }
+
+
+/* ---------- Dropdown menus ---------- */
+.site-nav .menu > li { position: relative; display: flex; align-items: center; }
+.sub-toggle { display: inline-grid; place-items: center; width: 1.4rem; height: 1.4rem; margin-left: .15rem; padding: 0; border: 0; border-radius: 3px; background: none; color: var(--muted); cursor: pointer; }
+.sub-toggle:hover { color: var(--ink); background: color-mix(in srgb, var(--brackish) 10%, transparent); }
+.sub-toggle svg { transition: transform .15s; }
+li.open > .sub-toggle svg { transform: rotate(180deg); }
+.sub-menu { list-style: none; margin: 0; padding: .4rem; position: absolute; z-index: 30; top: calc(100% + .35rem); left: -.6rem; min-width: 14rem; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(10, 30, 25, .14); display: none; }
+.sub-menu::before { content: ""; position: absolute; left: 0; right: 0; top: -.5rem; height: .5rem; } /* keeps hover alive across the gap */
+.site-nav li:hover > .sub-menu, .site-nav li:focus-within > .sub-menu, .site-nav li.open > .sub-menu { display: block; }
+.sub-menu li { position: relative; display: flex; align-items: center; }
+.site-nav .sub-menu a { display: block; flex: 1; padding: .5rem .7rem; border: 0; border-radius: 5px; font-size: .95rem; font-weight: 500; color: var(--text); white-space: nowrap; }
+.site-nav .sub-menu a:hover, .site-nav .sub-menu .current > a { background: color-mix(in srgb, var(--brackish) 9%, transparent); color: var(--ink); border: 0; }
+.sub-menu .sub-toggle { transform: rotate(-90deg); margin-right: .2rem; }
+.sub-menu .sub-menu { top: -.45rem; left: calc(100% + .3rem); }
+.sub-menu .sub-menu::before { left: -.5rem; top: 0; bottom: 0; width: .5rem; height: auto; }
+.site-nav .menu .current-branch > a { color: var(--ink); }
+@media (max-width: 640px) {
+    .site-nav .menu { flex-direction: column; align-items: flex-start; gap: .15rem; width: 100%; }
+    .site-nav .menu > li { flex-wrap: wrap; width: 100%; }
+    .sub-menu, .sub-menu .sub-menu { position: static; box-shadow: none; border: 0; border-left: 1px solid var(--line); border-radius: 0; margin: .2rem 0 .4rem .4rem; padding: 0 0 0 .6rem; min-width: 0; width: 100%; background: transparent; }
+    .sub-toggle { width: 2.2rem; height: 2.2rem; margin-left: .3rem; border: 1px solid var(--line); border-radius: 6px; }
+    .sub-menu::before { display: none; }
+    .site-nav li:hover > .sub-menu, .site-nav li:focus-within > .sub-menu { display: none; }
+    .site-nav li.open > .sub-menu { display: block; }
+    .sub-menu .sub-toggle { transform: none; }
+    .site-nav .sub-menu a { white-space: normal; padding: .35rem .4rem; }
+}
+/* The footer menu shows every level as a plain row of links. */
+.menu-footer .sub-toggle { display: none; }
+.menu-footer .sub-menu { display: contents; list-style: none; }
+.menu-footer li { display: contents; }
+.menu-footer a { margin-right: 1.2rem; }

@@ -1,81 +1,96 @@
-@model List<MenuItem>
+@using Mangrove.Cms.Services
 @{
     ViewData["Title"] = "Menus";
     var location = (string)ViewBag.Location;
-    var pages = (List<Post>)ViewBag.Pages;
-    var categories = (List<Term>)ViewBag.Categories;
+    var counts = (Dictionary<string, int>)ViewBag.Counts;
     var names = new Dictionary<string, string> { ["primary"] = "Main menu", ["footer"] = "Footer menu" };
+    var where = new Dictionary<string, string> { ["primary"] = "at the top of every page", ["footer"] = "at the bottom of every page" };
+    var sources = new (string Key, string Label, string Type, object Items, string Empty)[]
+    {
+        ("pages", "Pages", MenuLinkTypes.Page, ViewBag.Pages, "No published pages yet."),
+        ("posts", "Posts", MenuLinkTypes.Post, ViewBag.Posts, "No published posts yet."),
+        ("categories", "Categories", MenuLinkTypes.Category, ViewBag.Categories, "No categories yet."),
+        ("tags", "Tags", MenuLinkTypes.Tag, ViewBag.Tags, "No tags yet."),
+    };
+    var data = new
+    {
+        location,
+        maxDepth = MenuService.MaxDepth,
+        items = (List<MenuEditItem>)ViewBag.Items,
+        sources = sources.ToDictionary(s => s.Type, s => s.Items),
+    };
 }
 <div class="page-head">
     <h1>Menus</h1>
-    <p class="lede">The main menu sits at the top of every page; the footer menu at the bottom.</p>
+    <p class="lede">Add pages, posts, categories or links, then drag them into order. Drag an item to the right to make it a sub-item; it then opens from its parent as a dropdown.</p>
 </div>
+
 <div class="toolbar">
     <nav class="filters" aria-label="Choose a menu">
-        @foreach (var loc in Mangrove.Cms.Areas.Admin.Controllers.MenusController.Locations)
+        @foreach (var loc in MenuService.Locations)
         {
-            <a class="@(loc == location ? "active" : null)" href="/admin/menus?location=@loc">@names[loc]</a>
+            <a class="@(loc == location ? "active" : null)" href="/admin/menus?location=@loc">@names[loc]<span class="n">@(counts.TryGetValue(loc, out var n) ? n : 0)</span></a>
         }
     </nav>
 </div>
-<div class="grid-side">
-    <div>
-        @if (pages.Count > 0 || categories.Count > 0)
+
+<div class="grid-side menu-builder" id="menu-builder">
+    <aside class="mb-sources">
+        <h2 class="mb-side-title">Add menu items</h2>
+        @foreach (var (s, i) in sources.Select((s, i) => (s, i)))
         {
-            <section class="panel">
-                <h2>Add a page or category</h2>
-                <div class="quick-add">
-                    @foreach (var p in pages)
+            var list = ((System.Collections.IEnumerable)s.Items).Cast<object>().ToList();
+            <details class="panel mb-source" open="@(i == 0)" data-source="@s.Type">
+                <summary>@s.Label <span class="muted small">@list.Count</span></summary>
+                @if (list.Count == 0)
+                {
+                    <p class="muted small">@s.Empty</p>
+                }
+                else
+                {
+                    @if (list.Count > 8)
                     {
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="inline">
-                            <input type="hidden" name="location" value="@location" /><input type="hidden" name="label" value="@p.Title" /><input type="hidden" name="url" value="/@p.Slug" />
-                            <button class="chip"><svg class="ic"><use href="#i-plus" /></svg>@p.Title</button>
-                        </form>
+                        <input type="search" class="mb-filter" placeholder="Search @s.Label.ToLowerInvariant()" aria-label="Search @s.Label.ToLowerInvariant()" data-source-filter />
                     }
-                    @foreach (var c in categories)
-                    {
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/add" class="inline">
-                            <input type="hidden" name="location" value="@location" /><input type="hidden" name="label" value="@c.Name" /><input type="hidden" name="url" value="/category/@c.Slug" />
-                            <button class="chip"><svg class="ic"><use href="#i-plus" /></svg>@c.Name</button>
-                        </form>
-                    }
-                </div>
-            </section>
-        }
-        <section class="panel">
-            <h2>Add a custom link</h2>
-            <form method="post" asp-antiforgery="true" action="/admin/menus/add">
-                <input type="hidden" name="location" value="@location" />
-                <label for="m-label">Label</label>
-                <input id="m-label" name="label" required maxlength="120" />
-                <label for="m-url">Link</label>
-                <input id="m-url" name="url" required placeholder="/contact or https://example.com" maxlength="500" />
-                <label class="check"><input type="checkbox" name="openInNewTab" value="true" /> Open in a new tab</label>
-                <div class="actions"><button class="btn primary">Add to @names[location].ToLowerInvariant()</button></div>
-            </form>
-        </section>
-    </div>
-    <section class="panel">
-        <h2>@names[location]</h2>
-        @if (Model.Count == 0) { <p class="muted">This menu is empty. Add pages, categories or links on the left.</p> }
-        <ol class="menu-items">
-            @for (var i = 0; i < Model.Count; i++)
-            {
-                var m = Model[i];
-                <li>
-                    <form method="post" asp-antiforgery="true" action="/admin/menus/update/@m.Id" class="menu-row">
-                        <input name="label" value="@m.Label" aria-label="Label" required />
-                        <input name="url" value="@m.Url" aria-label="Link" required />
-                        <label class="check small"><input type="checkbox" name="openInNewTab" value="true" checked="@m.OpenInNewTab" /> New tab</label>
-                        <button class="btn sm">Save</button>
-                    </form>
-                    <div class="menu-tools">
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="-1" /><button class="btn icon quiet" disabled="@(i == 0)" aria-label="Move @m.Label up"><svg class="ic"><use href="#i-up" /></svg></button></form>
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/move/@m.Id" class="inline"><input type="hidden" name="direction" value="1" /><button class="btn icon quiet" disabled="@(i == Model.Count - 1)" aria-label="Move @m.Label down"><svg class="ic"><use href="#i-down" /></svg></button></form>
-                        <form method="post" asp-antiforgery="true" action="/admin/menus/delete/@m.Id" class="inline"><button class="btn icon quiet danger" aria-label="Remove @m.Label"><svg class="ic"><use href="#i-x" /></svg></button></form>
+                    <div class="mb-checklist" data-checklist></div>
+                    <div class="mb-source-actions">
+                        <button type="button" class="linklike small" data-select-all>Select all</button>
+                        <button type="button" class="btn sm" data-add-selected>Add to menu</button>
                     </div>
-                </li>
-            }
-        </ol>
+                }
+            </details>
+        }
+        <details class="panel mb-source" data-source="custom">
+            <summary>Custom link</summary>
+            <label for="mb-url">Link</label>
+            <input id="mb-url" placeholder="https://example.com or /contact" data-custom-url />
+            <label for="mb-label">Label</label>
+            <input id="mb-label" placeholder="Shown in the menu" data-custom-label />
+            <p class="field-error" data-custom-error></p>
+            <div class="mb-source-actions"><span></span><button type="button" class="btn sm" data-add-custom>Add to menu</button></div>
+        </details>
+    </aside>
+
+    <section class="panel mb-structure">
+        <div class="mb-structure-head">
+            <div>
+                <h2>@names[location]</h2>
+                <p class="muted small">Shown @where[location].</p>
+            </div>
+            <span class="spacer"></span>
+            <span class="small" data-state aria-live="polite"></span>
+            <button type="button" class="btn primary" data-save>Save menu</button>
+        </div>
+        <ul class="mb-list" data-list aria-label="Menu structure"></ul>
+        <div class="mb-empty" data-empty hidden>
+            <svg class="ic"><use href="#i-menus" /></svg>
+            <p>This menu is empty. Tick pages or categories on the left and click <strong>Add to menu</strong>.</p>
+        </div>
+        <p class="hint mb-hint">Drag the dots to move an item; drag right or left to change its level. Open an item to rename it or use the move buttons.</p>
     </section>
 </div>
+
+@section Scripts {
+    <script>window.MANGROVE_MENU = @Json.Serialize(data);</script>
+    <script src="/js/menu-editor.js" asp-append-version="true"></script>
+}
