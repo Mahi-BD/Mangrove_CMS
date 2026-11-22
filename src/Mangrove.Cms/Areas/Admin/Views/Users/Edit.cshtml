@@ -4,6 +4,7 @@
 <form method="post" asp-antiforgery="true" action="/admin/users/save" class="narrow-form">
     <div asp-validation-summary="ModelOnly" class="errors"></div>
     <input type="hidden" asp-for="Id" />
+    <div class="form-columns">
     <section class="panel">
         <h2>Account</h2>
         <label asp-for="UserName">Username</label>
@@ -28,6 +29,7 @@
         <span class="hint">@(Model.Id == 0 ? "At least 8 characters." : "Leave empty to keep the current password.")</span>
         <label class="check" style="margin-top:1rem"><input asp-for="IsActive" /> Can sign in</label>
     </section>
+    </div>
     <div class="actions">
         <button class="btn primary">@(Model.Id == 0 ? "Add user" : "Save changes")</button>
         <a class="btn quiet" href="/admin/users">Cancel</a>

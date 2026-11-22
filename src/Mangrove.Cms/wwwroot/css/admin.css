@@ -183,7 +183,7 @@ legend { font-weight: 650; color: var(--ink); padding: 0; margin-bottom: .2rem; 
 .user-chip { display: inline-flex; align-items: center; gap: .55rem; color: var(--text); text-decoration: none; font-weight: 500; }
 .avatar { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: .78rem; font-weight: 650; text-transform: uppercase; }
 .nav-burger { display: none; cursor: pointer; margin: 0; color: var(--ink); }
-.admin-content { padding: 2rem 2rem 4rem; width: 100%; max-width: 1240px; }
+.admin-content { padding: 2rem 2rem 4rem; width: 100%; }
 .page-head { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
 .page-head h1 { margin: 0; }
 .page-head .lede { flex: 0 0 100%; order: 10; margin: .1rem 0 0; color: var(--muted); }
@@ -312,7 +312,9 @@ tr:hover .row-actions, tr:focus-within .row-actions { visibility: visible; }
 .trash-link { display: inline-block; margin-top: .85rem; font-size: .85rem; }
 .checklist { max-height: 220px; overflow: auto; margin: -.2rem 0 .4rem; }
 .featured-preview img { width: 100%; border-radius: var(--r-sm); margin-bottom: .6rem; display: block; aspect-ratio: 16 / 10; object-fit: cover; }
-.narrow-form { max-width: 680px; }
+.narrow-form { width: 100%; }
+/* Form pages use the full width by placing sections side by side, so fields stay a readable length. */
+.form-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 0 1.25rem; align-items: start; }
 
 /* Rendered content (preview) */
 .entry-content { font: 400 17px/1.75 var(--serif); color: var(--text); }

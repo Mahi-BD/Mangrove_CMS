@@ -3,6 +3,7 @@
 <div class="page-head"><h1>Settings</h1></div>
 <form method="post" class="narrow-form">
     <div asp-validation-summary="ModelOnly" class="errors"></div>
+    <div class="form-columns">
     <section class="panel">
         <h2>Site</h2>
         <label asp-for="SiteTitle">Site name</label>
@@ -32,5 +33,6 @@
         <label class="check"><input asp-for="CommentModeration" /> Review new comments before they appear</label>
         <label class="check"><input asp-for="AllowRegistration" /> Let anyone create an account (as a Subscriber)</label>
     </section>
+    </div>
     <div class="actions"><button class="btn primary">Save settings</button></div>
 </form>
