@@ -20,7 +20,7 @@ It's a single, self-contained app: no database server to install, no Node build 
 | **Comments** | Threaded replies, a moderation queue (approve, spam, trash), a honeypot and rate limiting |
 | **Users & roles** | Administrator, Editor, Author, Subscriber. Optional public registration |
 | **Themes** | Razor themes with fallback: a theme overrides only the views it needs. Ships with *Mangrove* (magazine layout, Literata) and *Minimal* (single column) |
-| **Menus** | WordPress-style menu builder for the main and footer menus: add pages, posts, categories, tags or custom links, drag to reorder and drag right to nest (three levels, shown as dropdowns), keyboard move buttons; links follow pages when their address changes |
+| **Menus** | WordPress-style menu builder for the main and footer menus: add pages, posts, categories, tags or custom links, drag to reorder and drop into another item to nest (SortableJS, three levels, shown as dropdowns), keyboard move buttons; links follow pages when their address changes |
 | **SEO** | Clean `/slug` URLs (Unicode-friendly, e.g. Bangla), RSS feed (`/feed`), `sitemap.xml`, `robots.txt`, canonical and Open Graph tags |
 | **Security** | PBKDF2 password hashing, antiforgery on every POST, sanitized HTML output, login rate limiting, and sessions revoked on password or role change |
 | **Setup** | First-run wizard creates the admin account and optional sample content |
@@ -115,6 +115,10 @@ src/Mangrove.Cms/
 - [ ] Plugin/hook system
 - [ ] WordPress WXR import
 - [ ] Multi-language content
+
+## Third-party
+
+Bundled locally (no CDN): [SortableJS](https://sortablejs.github.io/Sortable/) 1.15.7 for the menu builder (MIT, `wwwroot/lib/sortablejs`), Literata and Schibsted Grotesk fonts (SIL OFL, `wwwroot/fonts`). NuGet: Markdig, HtmlSanitizer, ExcelDataReader (all MIT).
 
 ## Contributing
 

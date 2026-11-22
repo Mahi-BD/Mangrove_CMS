@@ -541,12 +541,20 @@ tr:hover .row-actions, tr:focus-within .row-actions { visibility: visible; }
 .mb-structure-head p { margin: .1rem 0 0; }
 .mb-unsaved { color: var(--tannin); font-weight: 600; }
 .mb-list { list-style: none; margin: 0; padding: 1rem 1.25rem .5rem; }
-.mb-item { margin: 0 0 .45rem calc(var(--d, 0) * 32px); max-width: 640px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); transition: margin-left .12s ease; }
-.mb-item.open { border-color: var(--ink); }
-.mb-item.broken { border-style: dashed; }
-.mb-item.broken .mb-label { color: var(--muted); text-decoration: line-through; }
-.mb-item.lifted { border-color: var(--brackish); box-shadow: 0 6px 18px rgba(12, 30, 26, .14); background: var(--brackish-soft); }
-.mb-dragging, .mb-dragging * { cursor: grabbing !important; user-select: none; }
+.mb-item { max-width: 640px; }
+.mb-card { margin-bottom: .45rem; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); }
+.mb-item.open > .mb-card { border-color: var(--ink); }
+.mb-item.broken > .mb-card { border-style: dashed; }
+.mb-item.broken > .mb-card .mb-label { color: var(--muted); text-decoration: line-through; }
+/* Each item's sub-list. Empty ones stay a thin drop zone so items can be nested into them. */
+.mb-children { list-style: none; margin: 0 0 0 2rem; padding: 0; min-height: 6px; border-radius: var(--r-sm); }
+.mb-sorting .mb-children { min-height: 14px; margin-bottom: .2rem; }
+.mb-sorting .mb-children:empty { background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 12px) bottom / 100% 1px no-repeat; }
+.mb-ghost > .mb-card { border: 1.5px dashed var(--brackish); background: var(--brackish-soft); }
+.mb-ghost > .mb-card > * { opacity: .35; }
+.mb-drag > .mb-card { box-shadow: 0 10px 26px rgba(12, 30, 26, .18); border-color: var(--brackish); }
+.mb-chosen > .mb-card .mb-handle { color: var(--ink); }
+.mb-sorting, .mb-sorting * { cursor: grabbing !important; }
 .mb-bar { display: flex; align-items: center; gap: .3rem; min-height: 42px; padding: 0 .3rem 0 .15rem; }
 .mb-handle { display: inline-grid; place-items: center; width: 28px; height: 36px; color: var(--muted); cursor: grab; touch-action: none; flex: none; }
 .mb-handle:hover { color: var(--ink); }
@@ -557,7 +565,7 @@ tr:hover .row-actions, tr:focus-within .row-actions { visibility: visible; }
 .mb-chev { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 5px; background: none; color: var(--muted); cursor: pointer; }
 .mb-chev:hover { background: var(--silt); color: var(--ink); }
 .mb-chev .ic { width: 16px; height: 16px; transition: transform .15s; }
-.mb-item.open .mb-chev .ic { transform: rotate(180deg); }
+.mb-item.open > .mb-card .mb-chev .ic { transform: rotate(180deg); }
 .mb-detail { padding: .2rem 1rem 1rem; border-top: 1px solid var(--line); }
 .mb-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 .9rem; }
 .mb-fields label { margin-top: .7rem; }
@@ -569,7 +577,7 @@ tr:hover .row-actions, tr:focus-within .row-actions { visibility: visible; }
 .mb-hint { padding: 0 1.25rem 1.1rem; margin: 0; }
 @media (max-width: 1000px) { .menu-builder { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
-    .mb-item { margin-left: calc(var(--d, 0) * 16px); }
+    .mb-children { margin-left: 1rem; }
     .mb-fields { grid-template-columns: 1fr; }
     .mb-type { display: none; }
 }

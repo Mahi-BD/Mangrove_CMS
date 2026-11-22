@@ -1,22 +1,24 @@
-/* Mangrove CMS: drag-and-drop menu builder. Plain JS, no dependencies.
-   The menu is a flat list where `depth` says how far each item is nested (0 = top level),
-   like WordPress. Dragging moves an item together with its sub-items. */
+/* Mangrove CMS: menu builder. Dragging uses SortableJS (wwwroot/lib/sortablejs, MIT) with nested lists:
+   every item has its own list of sub-items, and all lists share one Sortable group, so an item can be
+   dropped between items or into another item's sub-list.
+   State is a flat list where `depth` says how far each item is nested (0 = top level); it is turned into
+   nested lists to render and read back from the DOM after each drop. */
 (function () {
     'use strict';
     var data = window.MANGROVE_MENU;
     var root = document.getElementById('menu-builder');
-    if (!data || !root) return;
+    if (!data || !root || !window.Sortable) return;
 
-    var MAX = data.maxDepth;           // deepest allowed depth
-    var INDENT = 32;                   // px per level, in the list and when dragging
+    var MAX = data.maxDepth;   // deepest allowed depth (2 = three levels)
     var TYPE_LABEL = { custom: 'Custom link', page: 'Page', post: 'Post', category: 'Category', tag: 'Tag' };
     var items = data.items.map(function (i) {
         return { label: i.label, url: i.url, newTab: i.newTab, depth: i.depth, linkType: i.linkType, linkId: i.linkId, original: i.original, open: false };
     });
-    var dirty = false;
+    var dirty = false, sortables = [];
 
     var listEl = root.querySelector('[data-list]'), emptyEl = root.querySelector('[data-empty]');
     var stateEl = root.querySelector('[data-state]'), saveBtn = root.querySelector('[data-save]');
+    listEl.dataset.depth = '0';
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -26,79 +28,141 @@
     function token() { var el = document.querySelector('input[name="__RequestVerificationToken"]'); return el ? el.value : ''; }
     function setDirty(v) {
         dirty = v;
-        stateEl.textContent = v ? 'Unsaved changes' : stateEl.textContent;
+        if (v) stateEl.textContent = 'Unsaved changes';
         stateEl.classList.toggle('mb-unsaved', v);
     }
 
     // ---------- Tree helpers on the flat list ----------
-    /** Index just past item i's last descendant. */
-    function blockEnd(i) {
-        var j = i + 1;
-        while (j < items.length && items[j].depth > items[i].depth) j++;
-        return j;
-    }
-    function parentIndex(i) {
-        for (var j = i - 1; j >= 0; j--) if (items[j].depth < items[i].depth) return j;
+    function blockEnd(i) { var j = i + 1; while (j < items.length && items[j].depth > items[i].depth) j++; return j; }
+    function parentIndex(i) { for (var j = i - 1; j >= 0; j--) if (items[j].depth < items[i].depth) return j; return -1; }
+    function prevSibling(i) {
+        for (var j = i - 1; j >= 0; j--) { if (items[j].depth < items[i].depth) return -1; if (items[j].depth === items[i].depth) return j; }
         return -1;
     }
-    /** Re-clamp depths so each item is at most one level below the one before it. */
+    /** How many levels an item's sub-tree reaches below it (0 = no sub-items). */
+    function subtreeHeight(i) {
+        var h = 0, end = blockEnd(i);
+        for (var k = i + 1; k < end; k++) h = Math.max(h, items[k].depth - items[i].depth);
+        return h;
+    }
     function normalize() {
         var prev = -1;
-        items.forEach(function (it) {
-            it.depth = Math.max(0, Math.min(it.depth, prev + 1, MAX));
-            prev = it.depth;
+        items.forEach(function (it) { it.depth = Math.max(0, Math.min(it.depth, prev + 1, MAX)); prev = it.depth; });
+    }
+
+    // ---------- Rendering: flat list -> nested lists ----------
+    function itemHtml(i) {
+        var it = items[i], parent = parentIndex(i), sib = prevSibling(i), isCustom = it.linkType === 'custom';
+        var sub = it.depth > 0 ? '<span class="mb-sub">sub-item of ' + esc(items[parent].label) + '</span>' : '';
+        var html = '<div class="mb-card">' +
+            '<div class="mb-bar">' +
+            '<span class="mb-handle" title="Drag to move" aria-hidden="true"><svg class="ic"><use href="#i-grip"/></svg></span>' +
+            '<button type="button" class="mb-label" data-toggle="' + i + '" aria-expanded="' + it.open + '">' + esc(it.label) + sub + '</button>' +
+            '<span class="mb-type">' + TYPE_LABEL[it.linkType] + '</span>' +
+            '<button type="button" class="mb-chev" data-toggle="' + i + '" aria-label="Edit ' + esc(it.label) + '"><svg class="ic"><use href="#i-down"/></svg></button>' +
+            '</div>';
+        if (it.open) {
+            html += '<div class="mb-detail">' +
+                '<div class="mb-fields">' +
+                '<div><label for="mb-l' + i + '">Label</label><input id="mb-l' + i + '" value="' + esc(it.label) + '" data-field="label" data-i="' + i + '"></div>' +
+                '<div><label for="mb-u' + i + '">Link</label><input id="mb-u' + i + '" value="' + esc(it.url) + '" data-field="url" data-i="' + i + '"' + (isCustom ? '' : ' readonly') + '></div>' +
+                '</div>' +
+                (isCustom ? '' : '<p class="small muted">' + (it.original === 'Deleted'
+                    ? 'The ' + TYPE_LABEL[it.linkType].toLowerCase() + ' this pointed to was deleted, so visitors won\'t see this item.'
+                    : 'Links to the ' + TYPE_LABEL[it.linkType].toLowerCase() + ' “' + esc(it.original) + '”. The link updates if its address changes.') + '</p>') +
+                '<label class="check"><input type="checkbox" data-field="newTab" data-i="' + i + '"' + (it.newTab ? ' checked' : '') + '> Open in a new tab</label>' +
+                '<div class="mb-moves"><span class="small muted">Move</span>' +
+                (i > 0 ? '<button type="button" class="linklike small" data-move="up" data-i="' + i + '">Up one</button>' : '') +
+                (blockEnd(i) < items.length ? '<button type="button" class="linklike small" data-move="down" data-i="' + i + '">Down one</button>' : '') +
+                (sib >= 0 && it.depth + subtreeHeight(i) < MAX ? '<button type="button" class="linklike small" data-move="in" data-i="' + i + '">Under ' + esc(items[sib].label) + '</button>' : '') +
+                (it.depth > 0 ? '<button type="button" class="linklike small" data-move="out" data-i="' + i + '">Out from under ' + esc(items[parent].label) + '</button>' : '') +
+                (i > 0 ? '<button type="button" class="linklike small" data-move="top" data-i="' + i + '">To the top</button>' : '') +
+                '<span class="spacer"></span>' +
+                '<button type="button" class="linklike small danger" data-remove="' + i + '">Remove</button>' +
+                '</div></div>';
+        }
+        return html + '</div>';
+    }
+
+    /** Items from `start` while depth >= d, as <li>s; each li holds its card and its own sub-list. */
+    function listHtml(start, end, depth) {
+        var out = '', i = start;
+        while (i < end) {
+            var it = items[i], stop = blockEnd(i);
+            out += '<li class="mb-item' + (it.open ? ' open' : '') + (it.original === 'Deleted' ? ' broken' : '') + '" data-i="' + i + '">' +
+                itemHtml(i) +
+                (depth < MAX ? '<ul class="mb-children" data-depth="' + (depth + 1) + '">' + listHtml(i + 1, stop, depth + 1) + '</ul>' : '') +
+                '</li>';
+            i = stop;
+        }
+        return out;
+    }
+
+    function render() {
+        sortables.forEach(function (s) { s.destroy(); });
+        sortables = [];
+        normalize();
+        emptyEl.hidden = items.length > 0;
+        listEl.innerHTML = listHtml(0, items.length, 0);
+        [listEl].concat([].slice.call(listEl.querySelectorAll('.mb-children'))).forEach(function (ul) {
+            sortables.push(Sortable.create(ul, {
+                group: 'mangrove-menu',
+                handle: '.mb-handle',
+                draggable: '.mb-item',
+                animation: 150,
+                fallbackOnBody: true,
+                swapThreshold: 0.65,
+                emptyInsertThreshold: 12,
+                ghostClass: 'mb-ghost',
+                chosenClass: 'mb-chosen',
+                dragClass: 'mb-drag',
+                onStart: onStart,
+                onMove: onMove,
+                onEnd: onEnd,
+            }));
         });
     }
 
-    // ---------- Rendering ----------
-    function render() {
-        emptyEl.hidden = items.length > 0;
-        listEl.innerHTML = items.map(function (it, i) {
-            var parent = parentIndex(i);
-            var prevSibling = (function () {
-                for (var j = i - 1; j >= 0; j--) { if (items[j].depth < it.depth) return -1; if (items[j].depth === it.depth) return j; }
-                return -1;
-            })();
-            var isCustom = it.linkType === 'custom';
-            var sub = it.depth > 0 ? '<span class="mb-sub">sub-item of ' + esc(items[parent] ? items[parent].label : '') + '</span>' : '';
-            return '<li class="mb-item' + (it.open ? ' open' : '') + (it.original === 'Deleted' ? ' broken' : '') + '" data-i="' + i + '" style="--d:' + it.depth + '">' +
-                '<div class="mb-bar">' +
-                '<span class="mb-handle" data-handle title="Drag to move" aria-hidden="true"><svg class="ic"><use href="#i-grip"/></svg></span>' +
-                '<button type="button" class="mb-label" data-toggle="' + i + '" aria-expanded="' + it.open + '">' + esc(it.label) + sub + '</button>' +
-                '<span class="mb-type">' + TYPE_LABEL[it.linkType] + '</span>' +
-                '<button type="button" class="mb-chev" data-toggle="' + i + '" aria-label="Edit ' + esc(it.label) + '"><svg class="ic"><use href="#i-down"/></svg></button>' +
-                '</div>' +
-                (it.open ? '<div class="mb-detail">' +
-                    '<div class="mb-fields">' +
-                    '<div><label for="mb-l' + i + '">Label</label><input id="mb-l' + i + '" value="' + esc(it.label) + '" data-field="label" data-i="' + i + '"></div>' +
-                    '<div><label for="mb-u' + i + '">Link</label><input id="mb-u' + i + '" value="' + esc(it.url) + '" data-field="url" data-i="' + i + '"' + (isCustom ? '' : ' readonly') + '></div>' +
-                    '</div>' +
-                    (isCustom ? '' : '<p class="small muted">' + (it.original === 'Deleted'
-                        ? 'The ' + TYPE_LABEL[it.linkType].toLowerCase() + ' this pointed to was deleted, so visitors won\'t see this item.'
-                        : 'Links to the ' + TYPE_LABEL[it.linkType].toLowerCase() + ' “' + esc(it.original) + '”. The link updates if its address changes.') + '</p>') +
-                    '<label class="check"><input type="checkbox" data-field="newTab" data-i="' + i + '"' + (it.newTab ? ' checked' : '') + '> Open in a new tab</label>' +
-                    '<div class="mb-moves">' +
-                    '<span class="small muted">Move</span>' +
-                    (i > 0 ? '<button type="button" class="linklike small" data-move="up" data-i="' + i + '">Up one</button>' : '') +
-                    (blockEnd(i) < items.length ? '<button type="button" class="linklike small" data-move="down" data-i="' + i + '">Down one</button>' : '') +
-                    (prevSibling >= 0 && it.depth < MAX ? '<button type="button" class="linklike small" data-move="in" data-i="' + i + '">Under ' + esc(items[prevSibling].label) + '</button>' : '') +
-                    (it.depth > 0 ? '<button type="button" class="linklike small" data-move="out" data-i="' + i + '">Out from under ' + esc(items[parent].label) + '</button>' : '') +
-                    (i > 0 ? '<button type="button" class="linklike small" data-move="top" data-i="' + i + '">To the top</button>' : '') +
-                    '<span class="spacer"></span>' +
-                    '<button type="button" class="linklike small danger" data-remove="' + i + '">Remove</button>' +
-                    '</div></div>' : '') +
-                '</li>';
-        }).join('');
+    // ---------- Drag and drop (SortableJS) ----------
+    var dragHeight = 0;
+    function onStart(evt) {
+        dragHeight = subtreeHeight(+evt.item.dataset.i);
+        root.classList.add('mb-sorting');
     }
+    /** Refuse drops that would nest deeper than MAX levels (counting the dragged item's own sub-items). */
+    function onMove(evt) {
+        return +evt.to.dataset.depth + dragHeight <= MAX;
+    }
+    /** Read the new order and levels back from the nested lists. */
+    function onEnd() {
+        root.classList.remove('mb-sorting');
+        var next = [];
+        (function walk(ul, depth) {
+            [].forEach.call(ul.children, function (li) {
+                if (!li.classList.contains('mb-item')) return;
+                var it = items[+li.dataset.i];
+                it.depth = depth;
+                next.push(it);
+                var sub = li.querySelector(':scope > .mb-children');
+                if (sub) walk(sub, depth + 1);
+            });
+        })(listEl, 0);
+        var changed = next.length !== items.length || next.some(function (it, k) { return it !== items[k]; }) ||
+            data._lastDepths !== next.map(function (x) { return x.depth; }).join(',');
+        items = next;
+        if (changed) setDirty(true);
+        data._lastDepths = items.map(function (x) { return x.depth; }).join(',');
+        render();
+    }
+    data._lastDepths = items.map(function (x) { return x.depth; }).join(',');
 
     // ---------- Editing ----------
     listEl.addEventListener('input', function (e) {
         var t = e.target, i = +t.dataset.i;
-        if (!t.dataset.field) return;
-        if (t.type === 'checkbox') items[i][t.dataset.field] = t.checked;
-        else items[i][t.dataset.field] = t.value;
+        if (!t.dataset.field || t.type === 'checkbox') return;
+        items[i][t.dataset.field] = t.value;
         if (t.dataset.field === 'label') {
-            var lbl = listEl.querySelector('.mb-item[data-i="' + i + '"] .mb-label');
+            var lbl = listEl.querySelector('.mb-item[data-i="' + i + '"] > .mb-card .mb-label');
             if (lbl) lbl.firstChild.textContent = t.value || '(no label)';
         }
         setDirty(true);
@@ -109,9 +173,7 @@
     });
 
     function moveBlock(from, to) {
-        // Move items[from..blockEnd(from)) so that it starts at index `to` of the remaining list.
-        var end = blockEnd(from);
-        var block = items.splice(from, end - from);
+        var block = items.splice(from, blockEnd(from) - from);
         items.splice.apply(items, [to, 0].concat(block));
         return block;
     }
@@ -124,7 +186,7 @@
             var it = items[+b.dataset.toggle];
             it.open = !it.open;
             render();
-            if (it.open) { var f = listEl.querySelector('#mb-l' + b.dataset.toggle); if (f) f.focus(); }
+            if (it.open) { var f = document.getElementById('mb-l' + b.dataset.toggle); if (f) f.focus(); }
             return;
         }
         if (b.dataset.remove !== undefined) {
@@ -132,98 +194,34 @@
             if (kids > 0 && !confirm('Remove “' + items[i].label + '”? Its ' + kids + (kids === 1 ? ' sub-item moves' : ' sub-items move') + ' up a level.')) return;
             for (var k = i + 1; k < end; k++) items[k].depth--;
             items.splice(i, 1);
-            normalize(); setDirty(true); render();
+            setDirty(true); render();
             return;
         }
         if (b.dataset.move) {
             var idx = +b.dataset.i, item = items[idx], move = b.dataset.move;
-            var keepOpen = item.open;
             if (move === 'up') {
-                // Jump above the previous item at the same or shallower depth (and its block).
                 var target = idx - 1;
                 while (target > 0 && items[target].depth > item.depth) target--;
                 var block = moveBlock(idx, target);
-                var d = (items[target - 1] ? items[target - 1].depth + 1 : 0);
+                var d = items[target - 1] ? items[target - 1].depth + 1 : 0;
                 if (block[0].depth > d) shiftDepth(block, d - block[0].depth);
             } else if (move === 'down') {
-                var end2 = blockEnd(idx), nextEnd = blockEnd(end2), len = end2 - idx;
-                moveBlock(idx, nextEnd - len);
+                var end2 = blockEnd(idx), len = end2 - idx;
+                moveBlock(idx, blockEnd(end2) - len);
             } else if (move === 'in') {
                 shiftDepth(items.slice(idx, blockEnd(idx)), 1);
             } else if (move === 'out') {
-                var p = parentIndex(idx), pEnd = blockEnd(p);
-                var blk = moveBlock(idx, pEnd - (blockEnd(idx) - idx));
+                var p = parentIndex(idx), blk = moveBlock(idx, blockEnd(p) - (blockEnd(idx) - idx));
                 shiftDepth(blk, -1);
             } else if (move === 'top') {
                 var blk2 = moveBlock(idx, 0);
                 shiftDepth(blk2, -blk2[0].depth);
             }
-            normalize(); setDirty(true); render();
-            var again = items.indexOf(item);
-            if (keepOpen) { var bt = listEl.querySelector('.mb-item[data-i="' + again + '"] [data-move]'); if (bt) bt.focus(); }
+            setDirty(true); render();
+            var bt = listEl.querySelector('.mb-item[data-i="' + items.indexOf(item) + '"] [data-move]');
+            if (bt) bt.focus();
         }
     });
-
-    // ---------- Drag and drop (vertical = order, horizontal = level) ----------
-    var drag = null;
-    listEl.addEventListener('pointerdown', function (e) {
-        var h = e.target.closest('[data-handle]');
-        if (!h || e.button !== 0) return;
-        e.preventDefault();
-        var i = +h.closest('.mb-item').dataset.i;
-        var end = blockEnd(i);
-        drag = {
-            block: items.slice(i, end),
-            startX: e.clientX,
-            startDepth: items[i].depth,
-            relLast: items[end - 1].depth - items[i].depth,
-            relMax: Math.max.apply(null, items.slice(i, end).map(function (x) { return x.depth - items[i].depth; })),
-        };
-        drag.block.forEach(function (x) { x.open = false; });
-        root.classList.add('mb-dragging');
-        render(); mark();
-        document.addEventListener('pointermove', onMove);
-        document.addEventListener('pointerup', onUp, { once: true });
-    });
-
-    function mark() {
-        drag.block.forEach(function (x) {
-            var el = listEl.querySelector('.mb-item[data-i="' + items.indexOf(x) + '"]');
-            if (el) el.classList.add('lifted');
-        });
-    }
-
-    function onMove(e) {
-        if (!drag) return;
-        var rest = items.filter(function (x) { return drag.block.indexOf(x) < 0; });
-        // Where does the pointer sit among the items that aren't being dragged?
-        var els = [].filter.call(listEl.children, function (el) { return !el.classList.contains('lifted'); });
-        var pos = 0;
-        els.forEach(function (el) { var r = el.getBoundingClientRect(); if (e.clientY > r.top + r.height / 2) pos++; });
-        var prev = rest[pos - 1], next = rest[pos];
-        var want = drag.startDepth + Math.round((e.clientX - drag.startX) / INDENT);
-        var maxD = Math.min(prev ? prev.depth + 1 : 0, MAX - drag.relMax);
-        var minD = next ? Math.max(0, next.depth - 1 - drag.relLast) : 0;
-        var depth = Math.max(minD, Math.min(want, maxD));
-        if (depth < 0) depth = 0;
-
-        var delta = depth - drag.block[0].depth;
-        var newOrder = rest.slice(0, pos).concat(drag.block, rest.slice(pos));
-        var changedOrder = newOrder.some(function (x, k) { return x !== items[k]; });
-        if (changedOrder || delta !== 0) {
-            shiftDepth(drag.block, delta);
-            items = newOrder;
-            drag.moved = true;
-            render(); mark();
-        }
-    }
-    function onUp() {
-        document.removeEventListener('pointermove', onMove);
-        root.classList.remove('mb-dragging');
-        if (drag && drag.moved) { normalize(); setDirty(true); }
-        drag = null;
-        render();
-    }
 
     // ---------- Adding items ----------
     function addItem(it) {
@@ -235,7 +233,7 @@
     root.querySelectorAll('[data-source]').forEach(function (box) {
         var type = box.dataset.source;
         if (type === 'custom') return;
-        var src = (data.sources[type] || []);
+        var src = data.sources[type] || [];
         var list = box.querySelector('[data-checklist]');
         if (!list) return;
         list.innerHTML = src.map(function (s, k) {
@@ -260,13 +258,13 @@
                 c.checked = false;
             });
             setDirty(true); render();
-            listEl.lastElementChild && listEl.lastElementChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            if (listEl.lastElementChild) listEl.lastElementChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         });
     });
 
     var urlIn = root.querySelector('[data-custom-url]'), labelIn = root.querySelector('[data-custom-label]');
-    var customErr = root.querySelector('[data-custom-error]');
-    root.querySelector('[data-add-custom]').addEventListener('click', function () {
+    var customErr = root.querySelector('[data-custom-error]'), addCustom = root.querySelector('[data-add-custom]');
+    addCustom.addEventListener('click', function () {
         var url = urlIn.value.trim(), label = labelIn.value.trim();
         if (!/^(\/(?!\/)|#|https?:\/\/|mailto:|tel:)/i.test(url)) { customErr.textContent = 'Start the link with /, https://, mailto: or tel:.'; urlIn.focus(); return; }
         if (!label) { customErr.textContent = 'Give the link a label.'; labelIn.focus(); return; }
@@ -275,7 +273,7 @@
         urlIn.value = ''; labelIn.value = '';
         setDirty(true); render();
     });
-    [urlIn, labelIn].forEach(function (el) { el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); root.querySelector('[data-add-custom]').click(); } }); });
+    [urlIn, labelIn].forEach(function (el) { el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addCustom.click(); } }); });
 
     // ---------- Saving ----------
     function save() {
@@ -298,8 +296,8 @@
             items = r.j.items.map(function (i, k) {
                 return { label: i.label, url: i.url, newTab: i.newTab, depth: i.depth, linkType: i.linkType, linkId: i.linkId, original: i.original, open: !!openSet[k] };
             });
+            data._lastDepths = items.map(function (x) { return x.depth; }).join(',');
             setDirty(false);
-            stateEl.classList.remove('mb-unsaved');
             stateEl.textContent = 'Menu saved';
             render();
             var tab = document.querySelector('.filters a.active .n');
@@ -310,6 +308,5 @@
     document.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } });
     window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
-    normalize();
     render();
 })();

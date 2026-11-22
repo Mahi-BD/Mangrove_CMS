@@ -22,7 +22,7 @@
 }
 <div class="page-head">
     <h1>Menus</h1>
-    <p class="lede">Add pages, posts, categories or links, then drag them into order. Drag an item to the right to make it a sub-item; it then opens from its parent as a dropdown.</p>
+    <p class="lede">Add pages, posts, categories or links, then drag them into order. Drop an item under another one to make it a sub-item; it then opens from its parent as a dropdown.</p>
 </div>
 
 <div class="toolbar">
@@ -86,11 +86,12 @@
             <svg class="ic"><use href="#i-menus" /></svg>
             <p>This menu is empty. Tick pages or categories on the left and click <strong>Add to menu</strong>.</p>
         </div>
-        <p class="hint mb-hint">Drag the dots to move an item; drag right or left to change its level. Open an item to rename it or use the move buttons.</p>
+        <p class="hint mb-hint">Drag an item by its dots to reorder it. To make a sub-item, drop it into the space under another item. Open an item to rename it or use the move buttons.</p>
     </section>
 </div>
 
 @section Scripts {
     <script>window.MANGROVE_MENU = @Json.Serialize(data);</script>
+    <script src="/lib/sortablejs/Sortable.min.js" asp-append-version="true"></script>
     <script src="/js/menu-editor.js" asp-append-version="true"></script>
 }
